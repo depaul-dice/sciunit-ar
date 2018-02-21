@@ -23,4 +23,44 @@
  * SUCH DAMAGE.
  */
 
-#include <lip/lip.h>
+#ifndef _LIP_LIP_H
+#define _LIP_LIP_H
+
+#include <stdint.h>
+
+namespace lip
+{
+
+enum class flags
+{
+	is_regular_file = 0,
+	is_directory = 1,
+	is_symlink = 2,
+	lz4_compressed = 0x10,
+	has_sha512_224 = 0x20,
+};
+
+struct ptr
+{
+	int64_t offset;
+};
+
+struct descriptor
+{
+	ptr name;
+	uint32_t flag;
+	uint32_t digest[7];
+	int64_t size;
+	ptr begin;
+	ptr end;
+};
+
+static_assert(sizeof(descriptor) == 64, "unsupported");
+
+struct hier
+{
+};
+
+}
+
+#endif
