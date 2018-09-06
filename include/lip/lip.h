@@ -31,14 +31,26 @@
 namespace lip
 {
 
-enum class flags
+enum class ftype
 {
 	is_regular_file = 0,
 	is_directory = 1,
 	is_symlink = 2,
-	lz4_compressed = 0x10,
-	has_sha512_224 = 0x20,
 };
+
+enum class feature
+{
+	// if compressed, the digest field contains the original size
+	// if not, the digest field contains a blake2b-224 hash
+	lz4_compressed = 0x10,
+	executable = 0x100,
+	readonly = 0x200,
+};
+
+constexpr auto operator|(feature a, feature b)
+{
+	return feature(int(a) | int(b));
+}
 
 struct ptr
 {
@@ -50,15 +62,17 @@ struct descriptor
 	ptr name;
 	uint32_t flag;
 	uint32_t digest[7];
-	int64_t size;
+	int64_t mtime;
 	ptr begin;
 	ptr end;
 };
 
 static_assert(sizeof(descriptor) == 64, "unsupported");
 
-struct hier
+struct header
 {
+	char magic[4] = "LIP";
+	int32_t epoch = 584755;
 };
 
 }
