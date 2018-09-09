@@ -14,8 +14,6 @@
 #include "config.h"
 #endif
 
-#define STATIC_ASSERT(e, msg) typedef char msg[(e) ? 1 : -1]
-
 namespace cedar {
   // typedefs
 #if LONG_BIT == 64
@@ -70,9 +68,9 @@ namespace cedar {
       block () : prev (0), next (0), num (256), reject (257), trial (0), ehead (0) {}
     };
     da () : tracking_node (), _array (0), _tail (0), _tail0 (0), _ninfo (0), _block (0), _bheadF (0), _bheadC (0), _bheadO (0), _capacity (0), _size (0), _quota (0), _quota0 (0), _no_delete (false), _reject () {
-      STATIC_ASSERT(sizeof (value_type) <= sizeof (int),
-                    value_type_is_not_supported___maintain_a_value_array_by_yourself_and_store_its_index_to_trie
-                    );
+      static_assert(sizeof (value_type) <= sizeof (int),
+                    "value_type is not supported; maintain a value "
+                    "array by yourself and store its index to trie");
       _initialize ();
     }
     ~da () { clear (false); }
