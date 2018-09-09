@@ -27,9 +27,17 @@
 #define _LIP_LIP_H
 
 #include <stdint.h>
+#include <chrono>
+#include <memory>
+#include <cerrno>
+#include <system_error>
+
+#include <stdex/functional.h>
 
 namespace lip
 {
+
+namespace chrono = std::chrono;
 
 enum class ftype
 {
@@ -52,27 +60,80 @@ constexpr auto operator|(feature a, feature b)
 	return feature(int(a) | int(b));
 }
 
+struct archive_clock
+{
+	using duration = chrono::duration<int64_t, std::ratio<1, 10000000>>;
+	using rep = duration::rep;
+	using period = duration::period;
+	using time_point = chrono::time_point<archive_clock, duration>;
+};
+
+using ftime = archive_clock::time_point;
+
 struct ptr
 {
 	int64_t offset;
 };
 
-struct descriptor
+struct fcard
 {
-	ptr name;
+	union {
+		ptr name;
+		char* arcname;
+	};
 	uint32_t flag;
 	uint32_t digest[7];
-	int64_t mtime;
+	ftime mtime;
 	ptr begin;
 	ptr end;
 };
 
-static_assert(sizeof(descriptor) == 64, "unsupported");
+static_assert(sizeof(fcard) == 64, "unsupported");
 
 struct header
 {
 	char magic[4] = "LIP";
 	int32_t epoch = 584755;
+};
+
+class packer
+{
+public:
+	packer();
+	~packer();
+
+	template <class F>
+	void start(F&& f)
+	{
+		write_ = std::forward<F>(f);
+		write_struct<header>();
+	}
+
+	void add_directory(char const* arcname, ftime);
+	void add_symlink(char const* arcname, ftime);
+	void finish();
+
+private:
+	struct impl;
+
+	template <class T>
+	void write_struct(T&& v = {})
+	{
+		static_assert(std::is_trivially_copyable<
+		                  std::remove_reference_t<T>>::value,
+		              "not plain");
+		auto nbytes =
+		    write_(reinterpret_cast<char const*>(std::addressof(v)),
+		           sizeof(v));
+		if (nbytes != sizeof(v))
+			throw std::system_error{ errno,
+				                 std::system_category() };
+		cur_.offset += nbytes;
+	}
+
+	stdex::signature<size_t(char const*, size_t)> write_;
+	ptr cur_ = {};
+	std::unique_ptr<impl> impl_;
 };
 
 }

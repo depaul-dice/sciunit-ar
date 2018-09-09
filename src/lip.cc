@@ -24,3 +24,37 @@
  */
 
 #include <lip/lip.h>
+#include <cedar/cedarpp.h>
+#include <vector>
+
+namespace lip
+{
+
+struct packer::impl
+{
+	cedar::da<int> m;
+	std::vector<fcard> v;
+	ptr bss = {}, bes = {};
+
+	ptr get_index() const
+	{
+		constexpr int x = alignof(int64_t);
+		return { (bes.offset + (x - 1)) / x * x };
+	}
+};
+
+packer::packer()
+    : write_([](char const*, size_t x) { return x; }), impl_(new impl())
+{
+	impl_->v.reserve(1024);
+}
+
+packer::~packer() = default;
+
+void packer::finish()
+{
+	write_struct(impl_->get_index());
+	write_struct(impl_->bss);
+}
+
+}
