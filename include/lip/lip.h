@@ -41,6 +41,8 @@ namespace lip
 namespace chrono = std::chrono;
 
 using stdex::string_view;
+using read_callback = stdex::signature<size_t(char*, size_t)>;
+using write_callback = stdex::signature<size_t(char const*, size_t)>;
 
 enum class ftype
 {
@@ -124,15 +126,11 @@ public:
 	packer();
 	~packer();
 
-	template <class F>
-	void start(F&& f)
-	{
-		write_ = std::forward<F>(f);
-		cur_.offset += write_struct<header>();
-	}
-
+	void start(write_callback f);
 	void add_directory(string_view arcname, ftime);
 	void add_symlink(string_view arcname, ftime, string_view target);
+	void add_regular_file(string_view arcname, ftime, read_callback,
+	                      feature = {});
 
 	void finish()
 	{
@@ -169,7 +167,7 @@ private:
 
 	ptr new_literal(string_view arcname);
 
-	stdex::signature<size_t(char const*, size_t)> write_;
+	write_callback write_;
 	ptr cur_ = {};
 	std::unique_ptr<impl> impl_;
 };

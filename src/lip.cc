@@ -60,6 +60,12 @@ constexpr auto operator|(ftype a, feature b)
 	return uint32_t(a) | uint32_t(b);
 }
 
+void packer::start(write_callback f)
+{
+	write_ = f;
+	cur_.offset += write_struct<header>();
+}
+
 inline ptr packer::new_literal(string_view arcname)
 {
 	impl_->m.update(arcname.data(), arcname.size()) = int(impl_->v.size());
