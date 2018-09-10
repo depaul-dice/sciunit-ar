@@ -33,11 +33,14 @@
 #include <system_error>
 
 #include <stdex/functional.h>
+#include <stdex/string_view.h>
 
 namespace lip
 {
 
 namespace chrono = std::chrono;
+
+using stdex::string_view;
 
 enum class ftype
 {
@@ -66,6 +69,13 @@ struct archive_clock
 	using rep = duration::rep;
 	using period = duration::period;
 	using time_point = chrono::time_point<archive_clock, duration>;
+
+	static constexpr bool is_steady = false;
+
+	static time_point now() noexcept;
+
+	template <class T>
+	static time_point from(T const&) noexcept;
 };
 
 using ftime = archive_clock::time_point;
@@ -73,6 +83,18 @@ using ftime = archive_clock::time_point;
 struct ptr
 {
 	int64_t offset;
+
+	void adjust(void const* base) &
+	{
+		auto p = reinterpret_cast<char const*>(base) + offset;
+		offset = reinterpret_cast<intptr_t>(p);
+	}
+
+	template <class T>
+	T* pointer_to() const
+	{
+		return reinterpret_cast<T*>(offset);
+	}
 };
 
 struct fcard
@@ -106,30 +128,46 @@ public:
 	void start(F&& f)
 	{
 		write_ = std::forward<F>(f);
-		write_struct<header>();
+		cur_.offset += write_struct<header>();
 	}
 
-	void add_directory(char const* arcname, ftime);
-	void add_symlink(char const* arcname, ftime);
-	void finish();
+	void add_directory(string_view arcname, ftime);
+	void add_symlink(string_view arcname, ftime, string_view target);
+
+	void finish()
+	{
+		write_bss();
+		write_index();
+		write_section_pointers();
+	}
 
 private:
 	struct impl;
 
 	template <class T>
-	void write_struct(T&& v = {})
+	size_t write_struct(T&& v = {})
 	{
 		static_assert(std::is_trivially_copyable<
 		                  std::remove_reference_t<T>>::value,
 		              "not plain");
-		auto nbytes =
-		    write_(reinterpret_cast<char const*>(std::addressof(v)),
-		           sizeof(v));
-		if (nbytes != sizeof(v))
+		return write_buffer(
+		    reinterpret_cast<char const*>(std::addressof(v)),
+		    sizeof(v));
+	}
+
+	size_t write_buffer(char const* p, size_t sz)
+	{
+		if (write_(p, sz) != sz)
 			throw std::system_error{ errno,
 				                 std::system_category() };
-		cur_.offset += nbytes;
+		return sz;
 	}
+
+	void write_bss();
+	void write_index();
+	void write_section_pointers();
+
+	ptr new_literal(string_view arcname);
 
 	stdex::signature<size_t(char const*, size_t)> write_;
 	ptr cur_ = {};

@@ -34,12 +34,16 @@ struct packer::impl
 {
 	cedar::da<int> m;
 	std::vector<fcard> v;
-	ptr bss = {}, bes = {};
+	int64_t bss_size = 0;
 
-	ptr get_index() const
+	static constexpr auto npos = decltype(m)::CEDAR_NO_PATH;
+
+	ptr get_bes(ptr base) const { return { base.offset + bss_size }; }
+
+	ptr get_index(ptr base) const
 	{
 		constexpr int x = alignof(int64_t);
-		return { (bes.offset + (x - 1)) / x * x };
+		return { (get_bes(base).offset + (x - 1)) / x * x };
 	}
 };
 
@@ -51,10 +55,69 @@ packer::packer()
 
 packer::~packer() = default;
 
-void packer::finish()
+constexpr auto operator|(ftype a, feature b)
 {
-	write_struct(impl_->get_index());
-	write_struct(impl_->bss);
+	return uint32_t(a) | uint32_t(b);
+}
+
+inline ptr packer::new_literal(string_view arcname)
+{
+	impl_->m.update(arcname.data(), arcname.size()) = int(impl_->v.size());
+	return {};
+}
+
+void packer::add_directory(string_view arcname, ftime mtime)
+{
+	impl_->v.push_back(
+	    { { new_literal(arcname) }, int(ftype::is_directory), {}, mtime });
+}
+
+void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
+{
+	fcard c = { { new_literal(arcname) },
+		    int(ftype::is_symlink),
+		    {},  // hash it
+		    mtime,
+		    cur_ };
+	cur_.offset += write_buffer(target.data(), target.size());
+	c.end = cur_;
+	impl_->v.push_back(c);
+}
+
+void packer::write_bss()
+{
+	std::vector<char> s;
+	cedar::npos_t from = 0;
+	size_t sz = 0;
+	auto& m = impl_->m;
+	for (int i = m.begin(from, sz); i != impl::npos; i = m.next(from, sz))
+	{
+		s.resize(sz + 1);
+		m.suffix(s.data(), sz, from);
+		impl_->v[size_t(i)].name = impl_->get_bes(cur_);
+		impl_->bss_size += write_buffer(s.data(), s.size());
+	}
+
+	auto diff = size_t(impl_->get_index(cur_).offset -
+	                   impl_->get_bes(cur_).offset);
+	write_buffer("\0\0\0\0\0\0\0", diff);
+}
+
+void packer::write_index()
+{
+	cedar::npos_t from = 0;
+	size_t sz = 0;
+	auto& m = impl_->m;
+	for (int i = m.begin(from, sz); i != impl::npos; i = m.next(from, sz))
+	{
+		write_struct(impl_->v[size_t(i)]);
+	}
+}
+
+void packer::write_section_pointers()
+{
+	write_struct(impl_->get_index(cur_));
+	write_struct(cur_);
 }
 
 }
