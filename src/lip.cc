@@ -32,11 +32,18 @@ namespace lip
 
 struct packer::impl
 {
+	struct c_delete
+	{
+		void operator()(void* p) const { free(p); }
+	};
+
 	cedar::da<int> m;
 	std::vector<fcard> v;
 	int64_t bss_size = 0;
+	std::unique_ptr<char, c_delete> buf;
 
 	static constexpr auto npos = decltype(m)::CEDAR_NO_PATH;
+	static constexpr size_t bufsize = 64 * 1024;
 
 	ptr get_bes(ptr base) const { return { base.offset + bss_size }; }
 
@@ -51,6 +58,7 @@ packer::packer()
     : write_([](char const*, size_t x) { return x; }), impl_(new impl())
 {
 	impl_->v.reserve(1024);
+	impl_->buf.reset((char*)malloc(impl::bufsize));
 }
 
 packer::~packer() = default;
@@ -80,14 +88,38 @@ void packer::add_directory(string_view arcname, ftime mtime)
 
 void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
 {
-	fcard c = { { new_literal(arcname) },
-		    int(ftype::is_symlink),
-		    {},  // hash it
-		    mtime,
-		    cur_ };
+	auto start = cur_;
 	cur_.offset += write_buffer(target.data(), target.size());
-	c.end = cur_;
-	impl_->v.push_back(c);
+	impl_->v.push_back({ { new_literal(arcname) },
+	                     int(ftype::is_symlink),
+	                     {},  // hash it
+	                     mtime,
+	                     start,
+	                     cur_ });
+}
+
+void packer::add_regular_file(string_view arcname, ftime mtime,
+                              refill_callback f, feature feat)
+{
+	auto start = cur_;
+
+	for (error_code ec;;)
+	{
+		auto n = f(impl_->buf.get(), impl::bufsize, ec);
+		if (ec)
+			throw std::system_error{ ec };
+		else if (n == 0)
+			break;
+
+		cur_.offset += write_buffer(impl_->buf.get(), n);
+	}
+
+	impl_->v.push_back({ { new_literal(arcname) },
+	                     ftype::is_regular_file | feat,
+	                     {},  // hash it
+	                     mtime,
+	                     start,
+	                     cur_ });
 }
 
 void packer::write_bss()

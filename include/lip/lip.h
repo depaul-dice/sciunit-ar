@@ -41,8 +41,10 @@ namespace lip
 namespace chrono = std::chrono;
 
 using stdex::string_view;
+using std::error_code;
 using read_callback = stdex::signature<size_t(char*, size_t)>;
 using write_callback = stdex::signature<size_t(char const*, size_t)>;
+using refill_callback = stdex::signature<size_t(char*, size_t, error_code&)>;
 
 enum class ftype
 {
@@ -57,7 +59,7 @@ enum class feature
 	// if not, the digest field contains a blake2b-224 hash
 	lz4_compressed = 0x10,
 	executable = 0x100,
-	readonly = 0x200,
+	readonly = 0x200,  // unimplemented
 };
 
 constexpr auto operator|(feature a, feature b)
@@ -129,7 +131,7 @@ public:
 	void start(write_callback f);
 	void add_directory(string_view arcname, ftime);
 	void add_symlink(string_view arcname, ftime, string_view target);
-	void add_regular_file(string_view arcname, ftime, read_callback,
+	void add_regular_file(string_view arcname, ftime, refill_callback,
 	                      feature = {});
 
 	void finish()

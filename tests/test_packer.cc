@@ -62,6 +62,24 @@ TEST_CASE("packer")
 		REQUIRE(contentof(*dir).empty());
 	}
 
+	WHEN("adding file")
+	{
+		randombuf input(70000);
+
+		pk.add_symlink("second", lip::archive_clock::now(), "first");
+		pk.add_regular_file(
+		    "first", lip::archive_clock::now(),
+		    [&](char* p, size_t sz, std::error_code&) {
+			    return static_cast<size_t>(
+			        input.sgetn(p, std::streamsize(sz)));
+		    },
+		    lip::feature::executable);
+		pk.finish();
+
+		auto cs = sizeof(lip::fcard);
+		REQUIRE(s.size() == (70032 + cs * 2 + 16));
+	}
+
 	WHEN("empty")
 	{
 		pk.finish();
