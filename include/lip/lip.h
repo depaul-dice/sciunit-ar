@@ -55,7 +55,7 @@ enum class ftype
 
 enum class feature
 {
-	// if compressed, the digest field contains the original size
+	// if compressed, digest[0] and [1] contain the original size
 	// if not, the digest field contains a blake2b-224 hash
 	lz4_compressed = 0x10,
 	executable = 0x100,
@@ -107,8 +107,8 @@ struct fcard
 		ptr name;
 		char* arcname;
 	};
-	uint32_t flag;
 	uint32_t digest[7];
+	uint32_t flag;
 	ftime mtime;
 	ptr begin;
 	ptr end;
