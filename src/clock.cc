@@ -27,12 +27,14 @@
 
 #ifndef _WIN32
 #include <time.h>
+#else
+#include <Windows.h>
+#include <WinBase.h>
+#pragma comment(lib, "kernel32")
 #endif
 
 namespace lip
 {
-
-#ifndef _WIN32
 
 template <>
 archive_clock::time_point archive_clock::from(timespec const& ts) noexcept
@@ -42,6 +44,14 @@ archive_clock::time_point archive_clock::from(timespec const& ts) noexcept
 	    INT64_C(116444736000000000) + ts.tv_nsec / 100 });
 }
 
+#ifdef _WIN32
+template <>
+archive_clock::time_point archive_clock::from(FILETIME const& ts) noexcept
+{
+	return archive_clock::time_point(archive_clock::duration{
+	    (archive_clock::rep{ ts.dwHighDateTime } << 32) ^
+	    ts.dwLowDateTime });
+}
 #endif
 
 archive_clock::time_point archive_clock::now() noexcept
@@ -49,6 +59,9 @@ archive_clock::time_point archive_clock::now() noexcept
 #ifndef _WIN32
 	timespec ts;
 	clock_gettime(CLOCK_REALTIME, &ts);
+#else
+	FILETIME ts;
+	GetSystemTimePreciseAsFileTime(&ts);
 #endif
 	return archive_clock::from(ts);
 }
