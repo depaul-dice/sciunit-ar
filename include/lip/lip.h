@@ -180,6 +180,15 @@ private:
 	std::unique_ptr<impl> impl_;
 };
 
+struct archive_options
+{
+	char const* cd = nullptr;
+	bool one_level = false;
+	feature feat = {};
+};
+
+void archive(write_callback, char const* dirname, archive_options = {});
+
 }
 
 #endif

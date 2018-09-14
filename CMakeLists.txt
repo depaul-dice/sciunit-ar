@@ -33,7 +33,12 @@ endif()
 include_directories(3rdparty/include)
 include_directories(include)
 
-file(GLOB lip_srcs src/*.cc)
+set(lip_srcs src/lip.cc src/clock.cc src/blake2b.cc)
+if(WIN32)
+	list(APPEND lip_srcs src/win32.cc)
+else()
+	list(APPEND lip_srcs src/posix.cc)
+endif()
 file(GLOB tests_srcs tests/*.cc)
 
 add_library(lip ${lip_srcs})
