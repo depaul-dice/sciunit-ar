@@ -75,7 +75,7 @@ constexpr auto operator|(ftype a, feature b)
 void packer::start(write_callback f)
 {
 	write_ = f;
-	cur_.offset += write_struct<header>();
+	cur_.offset += write_struct(header{});
 }
 
 inline ptr packer::new_literal(string_view arcname)
