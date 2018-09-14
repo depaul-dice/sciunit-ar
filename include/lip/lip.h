@@ -27,6 +27,7 @@
 #define _LIP_LIP_H
 
 #include <stdint.h>
+#include <array>
 #include <chrono>
 #include <memory>
 #include <cerrno>
@@ -55,7 +56,7 @@ enum class ftype
 
 enum class feature
 {
-	// if compressed, digest[0] and [1] contain the original size
+	// if compressed, the sizeopt field contains the original size
 	// if not, the digest field contains a blake2b-224 hash
 	lz4_compressed = 0x10,
 	executable = 0x100,
@@ -101,13 +102,18 @@ struct ptr
 	}
 };
 
+using fhash = std::array<unsigned char, 28>;
+
 struct fcard
 {
 	union {
 		ptr name;
 		char* arcname;
 	};
-	uint32_t digest[7];
+	union {
+		fhash digest;
+		uint32_t sizeopt[2];
+	};
 	uint32_t flag;
 	ftime mtime;
 	ptr begin;

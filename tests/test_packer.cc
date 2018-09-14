@@ -5,8 +5,10 @@
 
 #include <new>
 #include <string.h>
+#include <stdex/hashlib.h>
 
 using namespace stdex::literals;
+using stdex::hashlib::hexlify;
 
 TEST_CASE("packer")
 {
@@ -60,6 +62,9 @@ TEST_CASE("packer")
 		REQUIRE(sym->mtime <= dir->mtime);
 		REQUIRE(contentof(*sym) == "../tmp"_sv);
 		REQUIRE(contentof(*dir).empty());
+		REQUIRE(sym->digest != dir->digest);
+		REQUIRE(hexlify(sym->digest) == "12e0296f8b9dba8f7f0be0614c67d"
+		                                "108c160cba9ff496e256d98b1c2");
 	}
 
 	WHEN("adding file")

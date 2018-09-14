@@ -27,8 +27,12 @@
 #include <cedar/cedarpp.h>
 #include <vector>
 
+#include <stdex/hashlib.h>
+
 namespace lip
 {
+
+using hashfn = stdex::hashlib::blake2b_224;
 
 struct packer::impl
 {
@@ -91,7 +95,7 @@ void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
 	auto start = cur_;
 	cur_.offset += write_buffer(target.data(), target.size());
 	impl_->v.push_back({ { new_literal(arcname) },
-	                     {},  // hash it
+	                     { hashfn(target).digest() },
 	                     int(ftype::is_symlink),
 	                     mtime,
 	                     start,
@@ -102,6 +106,7 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
                               refill_callback f, feature feat)
 {
 	auto start = cur_;
+	hashfn h;
 
 	for (error_code ec;;)
 	{
@@ -111,11 +116,12 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
 		else if (n == 0)
 			break;
 
+		h.update(impl_->buf.get(), n);
 		cur_.offset += write_buffer(impl_->buf.get(), n);
 	}
 
 	impl_->v.push_back({ { new_literal(arcname) },
-	                     {},  // hash it
+	                     { h.digest() },
 	                     ftype::is_regular_file | feat,
 	                     mtime,
 	                     start,
