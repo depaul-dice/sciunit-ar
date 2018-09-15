@@ -56,6 +56,12 @@ struct packer::impl
 		constexpr int x = alignof(int64_t);
 		return { (get_bes(base).offset + (x - 1)) / x * x };
 	}
+
+	ptr get_bss(ptr base) const
+	{
+		constexpr int x = alignof(int64_t);
+		return { base.offset / x * x };
+	}
 };
 
 packer::packer()
@@ -161,7 +167,7 @@ void packer::write_index()
 void packer::write_section_pointers()
 {
 	write_struct(impl_->get_index(cur_));
-	write_struct(cur_);
+	write_struct(impl_->get_bss(cur_));
 }
 
 }

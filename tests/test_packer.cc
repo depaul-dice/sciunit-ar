@@ -52,7 +52,7 @@ TEST_CASE("packer")
 		bssp->adjust(p.get());
 
 		REQUIRE(indexp->pointer_to<lip::fcard>() == dir);
-		REQUIRE(bssp->pointer_to<char>() == dir->arcname);
+		REQUIRE(bssp->pointer_to<char>() == (p.get() + 8));
 
 		auto contentof = [](lip::fcard const& fc) {
 			return std::string(fc.begin.pointer_to<char>(),
@@ -85,6 +85,26 @@ TEST_CASE("packer")
 
 		auto cs = sizeof(lip::fcard);
 		REQUIRE(s.size() == (70032 + cs * 2 + 16));
+
+		lip::ptr last[2];
+		memcpy(last, &*s.end() - 16, 16);
+		REQUIRE(last[0].offset == 70032);
+		REQUIRE(last[1].offset == 70008);
+
+		std::unique_ptr<char[]> p{
+			new char[s.size() - size_t(last[1].offset)]
+		};
+		auto indexp = last[0];
+		indexp.adjust(p.get() - last[1].offset);
+
+		::new (indexp.pointer_to<lip::fcard>()) lip::fcard;
+		::new (indexp.pointer_to<lip::fcard>() + 1) lip::fcard;
+		memcpy(p.get(), s.data() + last[1].offset,
+		       s.size() - size_t(last[0].offset));
+		auto& first = *indexp.pointer_to<lip::fcard>();
+		first.name.adjust(p.get() - last[1].offset);
+
+		REQUIRE(first.arcname == "first"_sv);
 	}
 
 	WHEN("empty")
