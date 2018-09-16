@@ -100,6 +100,8 @@ struct ptr
 	{
 		return reinterpret_cast<T*>(offset);
 	}
+
+	friend int64_t operator-(ptr x, ptr y) { return x.offset - y.offset; }
 };
 
 using fhash = std::array<unsigned char, 28>;
@@ -118,6 +120,28 @@ struct fcard
 	ftime mtime;
 	ptr begin;
 	ptr end;
+
+	int64_t stored_size() const { return end - begin; }
+
+	int64_t size() const
+	{
+		if (is_lz4_compressed())
+			return int64_t(sizeopt[1]) << 32 ^ sizeopt[0];
+		else
+			return stored_size();
+	}
+
+	ftype type() const { return static_cast<ftype>(flag & 0xf); }
+
+	bool is_lz4_compressed() const
+	{
+		return (flag & int(feature::lz4_compressed)) != 0;
+	}
+
+	bool is_executable() const
+	{
+		return (flag & int(feature::executable)) != 0;
+	}
 };
 
 static_assert(sizeof(fcard) == 64, "unsupported");

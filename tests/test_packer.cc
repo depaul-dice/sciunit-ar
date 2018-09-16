@@ -62,11 +62,16 @@ TEST_CASE("packer")
 		REQUIRE(dir->arcname == "tmp"_sv);
 		REQUIRE(sym->arcname == "tmp/self"_sv);
 		REQUIRE(sym->mtime <= dir->mtime);
+		REQUIRE(sym->size() == 6);
 		REQUIRE(contentof(*sym) == "../tmp"_sv);
+		REQUIRE(dir->size() == 0);
 		REQUIRE(contentof(*dir).empty());
 		REQUIRE(sym->digest != dir->digest);
 		REQUIRE(hexlify(sym->digest) == "12e0296f8b9dba8f7f0be0614c67d"
 		                                "108c160cba9ff496e256d98b1c2");
+		REQUIRE(sym->type() == lip::ftype::is_symlink);
+		REQUIRE(dir->type() == lip::ftype::is_directory);
+		REQUIRE_FALSE(dir->is_executable());
 	}
 
 	WHEN("adding file")
@@ -105,6 +110,9 @@ TEST_CASE("packer")
 		first.name.adjust(p.get() - last[1].offset);
 
 		REQUIRE(first.arcname == "first"_sv);
+		REQUIRE(first.type() == lip::ftype::is_regular_file);
+		REQUIRE(first.is_executable());
+		REQUIRE(first.size() == 70000);
 	}
 
 	WHEN("empty")
