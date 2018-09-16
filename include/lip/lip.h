@@ -182,7 +182,6 @@ private:
 
 struct archive_options
 {
-	char const* cd = nullptr;
 	bool one_level = false;
 	feature feat = {};
 };
