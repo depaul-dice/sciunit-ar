@@ -87,7 +87,7 @@ TEST_CASE("packer")
 		REQUIRE(s.size() == (70032 + cs * 2 + 16));
 
 		lip::ptr last[2];
-		memcpy(last, &*s.end() - 16, 16);
+		memcpy(last, &*s.begin() + s.size() - 16, 16);
 		REQUIRE(last[0].offset == 70032);
 		REQUIRE(last[1].offset == 70008);
 

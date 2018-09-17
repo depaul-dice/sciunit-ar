@@ -24,59 +24,10 @@
  */
 
 #include <lip/lip.h>
-#include <vvpkg/c_file_funcs.h>
 
-#ifdef _WIN32
-#include <io.h>
-#include <fcntl.h>
-#endif
-
-static void create(char const* filename, char const* dirname);
-
-using namespace stdex::literals;
-
-int main(int argc, char* argv[])
+namespace lip
 {
-	if (argc < 4)
-	{
-	err:
-		fprintf(stderr,
-		        "usage: %s [ctx]f <archive-file> [<directory>]\n",
-		        argv[0]);
-		exit(2);
-	}
-
-	try
-	{
-		if (argv[1] == "cf"_sv)
-			create(argv[2], argv[3]);
-		else
-			goto err;
-	}
-	catch (std::exception& e)
-	{
-		fprintf(stderr, "ERROR: %s\n", e.what());
-		exit(1);
-	}
+void archive(write_callback f, char const* dirname, archive_options opts)
+{
 }
-
-void create(char const* filename, char const* dirname)
-{
-	FILE* fp;
-	std::unique_ptr<FILE, vvpkg::c_file_deleter> to_open;
-
-	if (filename == "-"_sv)
-	{
-#ifdef _WIN32
-		_setmode(_fileno(stdout), _O_BINARY);
-#endif
-		fp = stdout;
-	}
-	else
-	{
-		to_open.reset(vvpkg::xfopen(filename, "wb"));
-		fp = to_open.get();
-	}
-
-	lip::archive(vvpkg::to_c_file(fp), dirname);
 }

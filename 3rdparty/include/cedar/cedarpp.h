@@ -717,7 +717,7 @@ namespace cedar {
     bool _consult (const int base_n, const int base_p, uchar c_n, uchar c_p) const {
       do c_n = _ninfo[base_n ^ c_n].sibling, c_p = _ninfo[base_p ^ c_p].sibling;
       while (c_n && c_p);
-      return c_p;
+      return c_p != 0;
     }
     // enumerate (equal to or more than one) child nodes
     uchar* _set_child (uchar* p, const int base, uchar c, const int label = -1) {
