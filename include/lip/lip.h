@@ -206,14 +206,39 @@ private:
 	std::unique_ptr<impl> impl_;
 };
 
+class gbpath
+{
+public:
+#ifdef _WIN32
+	using char_type = wchar_t;
+#else
+	using char_type = char;
+#endif
+	using param_type = char_type const*;
+
+	gbpath(param_type);
+	gbpath(gbpath const&);
+	gbpath& operator=(gbpath const&);
+	gbpath(gbpath&&) noexcept;
+	gbpath& operator=(gbpath&&) noexcept;
+	~gbpath();
+
+	auto friendly_name() const noexcept -> string_view;
+	void push_back(param_type);
+	void pop_back();
+
+private:
+	struct impl;
+	std::unique_ptr<impl> impl_;
+};
+
 struct archive_options
 {
 	bool one_level = false;
 	feature feat = {};
 };
 
-void archive(write_callback, char const* dirname, archive_options = {});
-
+void archive(write_callback, gbpath::param_type src, archive_options = {});
 }
 
 #endif

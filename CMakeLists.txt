@@ -33,7 +33,7 @@ endif()
 include_directories(3rdparty/include)
 include_directories(include)
 
-set(lip_srcs src/lip.cc src/clock.cc src/blake2b.cc)
+set(lip_srcs src/lip.cc src/clock.cc src/blake2b.cc src/gbpath.cc)
 if(WIN32)
 	list(APPEND lip_srcs src/win32.cc)
 else()

@@ -24,10 +24,68 @@
  */
 
 #include <lip/lip.h>
+#include "gbconverter.h"
+
+#include <vector>
+#include <algorithm>
 
 namespace lip
 {
-void archive(write_callback f, gbpath::param_type src, archive_options opts)
+
+struct gbpath::impl
 {
+	std::vector<char> name;
+};
+
+gbpath::gbpath(char_type const* s) : impl_(new impl)
+{
+	auto len = std::char_traits<char_type>::length(s);
+	impl_->name.resize(4 * len);
+	auto nbytes =
+	    gb.convert(s, len, impl_->name.data(), impl_->name.size());
+	impl_->name.resize(nbytes);
+}
+
+gbpath::gbpath(gbpath const& other) : impl_(new impl(*other.impl_)) {}
+
+gbpath& gbpath::operator=(gbpath const& other)
+{
+	auto temp = other;
+	std::swap(temp, *this);
+	return *this;
+}
+
+gbpath::gbpath(gbpath&&) noexcept = default;
+gbpath& gbpath::operator=(gbpath&&) noexcept = default;
+gbpath::~gbpath() = default;
+
+auto gbpath::friendly_name() const noexcept -> string_view
+{
+	return { impl_->name.data(), impl_->name.size() };
+}
+
+void gbpath::push_back(char_type const* s)
+{
+	auto len = std::char_traits<char_type>::length(s);
+	auto buflen = 4 * len;
+
+	impl_->name.push_back('/');
+	auto pfxlen = impl_->name.size();
+	impl_->name.resize(pfxlen + buflen);
+	auto p = impl_->name.data() + pfxlen;
+	auto nbytes = gb.convert(s, len, p, buflen);
+	impl_->name.resize(pfxlen + nbytes);
+}
+
+template <class Rg, class T>
+void preserve_until_last(Rg& rg, T v)
+{
+	auto it = std::find(rg.rbegin(), rg.rend(), v);
+	rg.erase(it.base() - (it != rg.rend()), rg.end());
+}
+
+void gbpath::pop_back()
+{
+	preserve_until_last(impl_->name, '/');
 }
 }

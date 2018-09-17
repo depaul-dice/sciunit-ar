@@ -184,18 +184,19 @@ inline bool is_dots(char const* dirname)
 	return dirname == "."_sv || dirname == ".."_sv;
 }
 
-void archive(write_callback f, char const* dirname, archive_options opts)
+void archive(write_callback f, gbpath::param_type src, archive_options opts)
 {
-	stack<std::pair<directory, std::string>> stk;
+	stack<std::pair<directory, gbpath>> stk;
 	packer pk;
 	struct stat st;
 
-	stk.emplace(directory(dirname), dirname);
+	stk.emplace(directory(src), src);
 	if (fstat(stk.top().first.native_handle(), &st) == -1)
 		throw std::system_error{ errno, std::system_category() };
 
 	pk.start(f);
-	pk.add_directory(stk.top().second, archive_clock::from(st.st_mtim));
+	pk.add_directory(stk.top().second.friendly_name(),
+	                 archive_clock::from(st.st_mtim));
 
 	while (not stk.empty())
 	{
@@ -222,30 +223,27 @@ void archive(write_callback f, char const* dirname, archive_options opts)
 					errno, std::system_category()
 				};
 
-			size_t orig = d.second.size();
-			auto new_path = [&](char const* pcom) -> auto const&
-			{
-				d.second.push_back('/');
-				d.second.append(pcom);
-				return d.second;
-			};
+			if (S_ISDIR(st.st_mode) &&
+			    (opts.one_level || is_dots(entryp->d_name)))
+				continue;
+
+			d.second.push_back(entryp->d_name);
 
 			switch (st.st_mode & S_IFMT)
 			{
 			case S_IFDIR:
-				if (opts.one_level || is_dots(entryp->d_name))
-					continue;
 				stk.emplace(d.first.cd(entryp->d_name),
-				            new_path(entryp->d_name));
+				            d.second);
 				pk.add_directory(
-				    d.second, archive_clock::from(st.st_mtim));
+				    d.second.friendly_name(),
+				    archive_clock::from(st.st_mtim));
 				break;
 			case S_IFREG:
 			{
 				auto to_copy =
 				    d.first.open(entryp->d_name, O_RDONLY);
 				pk.add_regular_file(
-				    new_path(entryp->d_name),
+				    d.second.friendly_name(),
 				    archive_clock::from(st.st_mtim),
 				    to_copy.get_reader(),
 				    d.first.is_executable(entryp->d_name) |
@@ -254,14 +252,14 @@ void archive(write_callback f, char const* dirname, archive_options opts)
 			}
 			case S_IFLNK:
 				pk.add_symlink(
-				    new_path(entryp->d_name),
+				    d.second.friendly_name(),
 				    archive_clock::from(st.st_mtim),
 				    d.first.readlink(st.st_size,
 				                     entryp->d_name));
 				break;
 			}
 
-			d.second.resize(orig);
+			d.second.pop_back();
 		}
 		if (errno)
 			throw std::system_error{ errno,
