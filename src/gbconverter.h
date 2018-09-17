@@ -42,12 +42,11 @@ namespace lip
 class gbconverter
 {
 public:
+	gbconverter() = default;
 	gbconverter(gbconverter const&) = delete;
 	gbconverter& operator=(gbconverter const&) = delete;
 
 #ifdef _WIN32
-	gbconverter() = default;
-
 	size_t convert(wchar_t const* from, size_t len, char* to,
 	               size_t buflen)
 	{
@@ -66,19 +65,12 @@ public:
 			}
 	}
 #else
-	gbconverter() : cd_(iconv_open("gb18030", nl_langinfo(CODESET)))
-	{
-		if (cd_ == (iconv_t)-1)
-			throw std::system_error{ errno,
-				                 std::system_category() };
-	}
-
 	size_t convert(char const* from, size_t len, char* to, size_t buflen)
 	{
 		errno = 0;
 		auto left = buflen;
 		auto p = const_cast<char*>(from);
-		if (iconv(cd_, &p, &len, &to, &left) == 0)
+		if (iconv(get(), &p, &len, &to, &left) == 0)
 		{
 			assert(len == 0);
 			return buflen - left;
@@ -89,10 +81,22 @@ public:
 			throw std::invalid_argument{ "convert" };
 	}
 
-	~gbconverter() { iconv_close(cd_); }
+	~gbconverter() { iconv_close(get()); }
 
 private:
-	iconv_t cd_;
+	static iconv_t get()
+	{
+		static auto cd = [] {
+			auto d = iconv_open("gb18030", nl_langinfo(CODESET));
+			if (d == (iconv_t)-1)
+				throw std::system_error{
+					errno, std::system_category()
+				};
+			return d;
+		}();
+
+		return cd;
+	}
 #endif
 };
 
