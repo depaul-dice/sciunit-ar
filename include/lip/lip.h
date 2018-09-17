@@ -156,6 +156,8 @@ class packer
 {
 public:
 	packer();
+	packer(packer&&) noexcept;
+	packer& operator=(packer&&) noexcept;
 	~packer();
 
 	void start(write_callback f);

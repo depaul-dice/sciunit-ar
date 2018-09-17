@@ -115,6 +115,25 @@ TEST_CASE("packer")
 		REQUIRE(first.size() == 70000);
 	}
 
+	WHEN("movable")
+	{
+		auto pk2 = std::move(pk);
+		pk2.add_directory("tmp", lip::archive_clock::now());
+
+		THEN("move constructible")
+		{
+			pk2.finish();
+			REQUIRE(s.size() == 32 + 64);
+		}
+
+		THEN("move assignable")
+		{
+			pk = std::move(pk2);
+			pk.finish();
+			REQUIRE(s.size() == 32 + 64);
+		}
+	}
+
 	WHEN("empty")
 	{
 		pk.finish();

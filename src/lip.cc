@@ -71,6 +71,8 @@ packer::packer()
 	impl_->buf.reset((char*)malloc(impl::bufsize));
 }
 
+packer::packer(packer&&) noexcept = default;
+packer& packer::operator=(packer&&) noexcept = default;
 packer::~packer() = default;
 
 constexpr auto operator|(ftype a, feature b)
