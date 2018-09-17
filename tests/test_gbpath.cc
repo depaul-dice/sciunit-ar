@@ -34,3 +34,14 @@ TEST_CASE("gbpath")
 	a.pop_back();
 	REQUIRE(a.friendly_name().empty());
 }
+
+TEST_CASE("unicode path")
+{
+#ifdef _WIN32
+	lip::gbpath a = (wchar_t const*)u"\u1e31";
+	REQUIRE(a.friendly_name() == "\x81\x35\xf3\x33"_sv);
+
+	a.push_back((wchar_t const*)u"\u6d4b\u8bd5");
+	REQUIRE(a.friendly_name() == "\x81\x35\xf3\x33/\xb2\xe2\xca\xd4"_sv);
+#endif
+}

@@ -59,7 +59,7 @@ public:
 			switch (GetLastError())
 			{
 			case ERROR_INSUFFICIENT_BUFFER:
-				throw std::out_of_range{ "convert" };
+				throw std::out_of_range{ "convert size" };
 			case ERROR_NO_UNICODE_TRANSLATION:
 				throw std::invalid_argument{ "convert" };
 			default: __assume(0);
@@ -84,7 +84,7 @@ public:
 			return buflen - left;
 		}
 		else if (errno == E2BIG)
-			throw std::out_of_range{ "convert" };
+			throw std::out_of_range{ "convert size" };
 		else
 			throw std::invalid_argument{ "convert" };
 	}

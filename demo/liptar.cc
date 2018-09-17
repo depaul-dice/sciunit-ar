@@ -29,26 +29,35 @@
 #ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
+#define U(s) stdex::wstring_view(L##s)
+#define UF "%ls"
+#else
+#define U(s) stdex::string_view(s)
+#define UF "%s"
 #endif
 
-static void create(char const* filename, char const* dirname);
+using param_type = lip::gbpath::param_type;
 
-using namespace stdex::literals;
+static void create(param_type filename, param_type dirname);
 
+#ifdef _WIN32
+int wmain(int argc, wchar_t* argv[])
+#else
 int main(int argc, char* argv[])
+#endif
 {
 	if (argc < 4)
 	{
 	err:
 		fprintf(stderr,
-		        "usage: %s [ctx]f <archive-file> [<directory>]\n",
+		        "usage: " UF " [ctx]f <archive-file> [<directory>]\n",
 		        argv[0]);
 		exit(2);
 	}
 
 	try
 	{
-		if (argv[1] == "cf"_sv)
+		if (argv[1] == U("cf"))
 			create(argv[2], argv[3]);
 		else
 			goto err;
@@ -60,12 +69,12 @@ int main(int argc, char* argv[])
 	}
 }
 
-void create(char const* filename, char const* dirname)
+void create(param_type filename, param_type dirname)
 {
 	FILE* fp;
 	std::unique_ptr<FILE, vvpkg::c_file_deleter> to_open;
 
-	if (filename == "-"_sv)
+	if (filename == U("-"))
 	{
 #ifdef _WIN32
 		_setmode(_fileno(stdout), _O_BINARY);
@@ -74,7 +83,7 @@ void create(char const* filename, char const* dirname)
 	}
 	else
 	{
-		to_open.reset(vvpkg::xfopen(filename, "wb"));
+		to_open.reset(vvpkg::xfopen(filename, U("wb").data()));
 		fp = to_open.get();
 	}
 

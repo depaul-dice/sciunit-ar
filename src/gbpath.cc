@@ -28,6 +28,7 @@
 
 #include <vector>
 #include <algorithm>
+#include <assert.h>
 
 namespace lip
 {
@@ -39,11 +40,13 @@ struct gbpath::impl
 
 gbpath::gbpath(char_type const* s) : impl_(new impl)
 {
-	auto len = std::char_traits<char_type>::length(s);
-	impl_->name.resize(4 * len);
-	auto nbytes =
-	    gb.convert(s, len, impl_->name.data(), impl_->name.size());
-	impl_->name.resize(nbytes);
+	if (auto len = std::char_traits<char_type>::length(s))
+	{
+		impl_->name.resize(4 * len);
+		auto nbytes =
+		    gb.convert(s, len, impl_->name.data(), impl_->name.size());
+		impl_->name.resize(nbytes);
+	}
 }
 
 gbpath::gbpath(gbpath const& other) : impl_(new impl(*other.impl_)) {}
@@ -67,6 +70,7 @@ auto gbpath::friendly_name() const noexcept -> string_view
 void gbpath::push_back(char_type const* s)
 {
 	auto len = std::char_traits<char_type>::length(s);
+	assert(len != 0);
 	auto buflen = 4 * len;
 
 	impl_->name.push_back('/');
