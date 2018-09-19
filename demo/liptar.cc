@@ -29,16 +29,84 @@
 #ifdef _WIN32
 #include <io.h>
 #include <fcntl.h>
-#define U(s) stdex::wstring_view(L##s)
+#define U(s) L##s
 #define UF "%ls"
+#define UNF "%.*ls"
 #else
-#define U(s) stdex::string_view(s)
+#define U(s) s
 #define UF "%s"
+#define UNF "%.*s"
 #endif
 
 using param_type = lip::gbpath::param_type;
+using view_type = stdex::basic_string_view<lip::gbpath::char_type>;
 
-static void create(param_type filename, param_type dirname);
+class command_error : public std::runtime_error
+{
+public:
+	command_error(view_type x, char const* msg)
+	    : std::runtime_error(msg), cmd(x)
+	{
+	}
+
+	view_type cmd;
+};
+
+struct args
+{
+	args(int argc, param_type* argv)
+	{
+		auto p = argv;
+		if (++p == argv + argc)
+		{
+		err:
+			fprintf(stderr,
+			        "usage: " UF
+			        " [ctx]f [-C <dir>] [--lz4] [--one-level] "
+			        "<archive-file> [<directory>]\n",
+			        argv[0]);
+			exit(2);
+		}
+
+		cmd = *p;
+
+		for (;;)
+		{
+			if (++p == argv + argc)
+				goto err;
+			if ((*p)[0] == U('-'))
+			{
+				view_type vp = *p;
+				if (vp == U("-C"))
+				{
+					if (++p == argv + argc)
+						goto err;
+					cd = *p;
+				}
+				else if (vp == U("--lz4"))
+					opts.feat =
+					    lip::feature::lz4_compressed;
+				else if (vp == U("--one-level"))
+					opts.one_level = true;
+				else
+					goto err;
+			}
+			else
+				break;
+		}
+
+		archive_file = *p;
+		++p;
+		directory = *p;
+	}
+
+	view_type cmd;
+	lip::archive_options opts;
+	param_type cd = nullptr, archive_file, directory;
+};
+
+static void create(param_type filename, param_type dirname,
+                   lip::archive_options);
 
 #ifdef _WIN32
 int wmain(int argc, wchar_t* argv[])
@@ -46,21 +114,25 @@ int wmain(int argc, wchar_t* argv[])
 int main(int argc, char* argv[])
 #endif
 {
-	if (argc < 4)
-	{
-	err:
-		fprintf(stderr,
-		        "usage: " UF " [ctx]f <archive-file> [<directory>]\n",
-		        argv[0]);
-		exit(2);
-	}
+	args a(argc, const_cast<param_type*>(argv));
 
 	try
 	{
-		if (argv[1] == U("cf"))
-			create(argv[2], argv[3]);
+		if (a.cmd == U("cf"))
+		{
+			if (a.directory == nullptr)
+				throw command_error{ a.cmd,
+					             "missing directory" };
+			create(a.archive_file, a.directory, a.opts);
+		}
 		else
-			goto err;
+			throw command_error{ a.cmd, "unrecognized command" };
+	}
+	catch (command_error& e)
+	{
+		fprintf(stderr, UNF ": %s\n", int(e.cmd.size()), e.cmd.data(),
+		        e.what());
+		exit(2);
 	}
 	catch (std::exception& e)
 	{
@@ -69,12 +141,12 @@ int main(int argc, char* argv[])
 	}
 }
 
-void create(param_type filename, param_type dirname)
+void create(param_type filename, param_type dirname, lip::archive_options opts)
 {
 	FILE* fp;
 	std::unique_ptr<FILE, vvpkg::c_file_deleter> to_open;
 
-	if (filename == U("-"))
+	if (filename == view_type(U("-")))
 	{
 #ifdef _WIN32
 		_setmode(_fileno(stdout), _O_BINARY);
@@ -83,9 +155,9 @@ void create(param_type filename, param_type dirname)
 	}
 	else
 	{
-		to_open.reset(vvpkg::xfopen(filename, U("wb").data()));
+		to_open.reset(vvpkg::xfopen(filename, U("wb")));
 		fp = to_open.get();
 	}
 
-	lip::archive(vvpkg::to_c_file(fp), dirname);
+	lip::archive(vvpkg::to_c_file(fp), dirname, opts);
 }
