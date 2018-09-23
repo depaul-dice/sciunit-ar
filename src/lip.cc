@@ -39,19 +39,15 @@ using hashfn = stdex::hashlib::blake2b_224;
 
 struct packer::impl
 {
-	struct c_delete
-	{
-		void operator()(void* p) const { free(p); }
-	};
-
 	cedar::da<int> m;
 	std::vector<fcard> v;
 	int64_t bss_size = 0;
-	std::unique_ptr<char, c_delete> buf;
 
 	static constexpr auto npos = decltype(m)::CEDAR_NO_PATH;
 	static constexpr size_t reqsize = 64 * 1024;
 	static constexpr size_t bufsize = LZ4_COMPRESSBOUND(reqsize);
+
+	char buf[bufsize];
 
 	ptr get_bes(ptr base) const { return { base.offset + bss_size }; }
 
@@ -72,7 +68,6 @@ packer::packer()
     : write_([](char const*, size_t x) { return x; }), impl_(new impl())
 {
 	impl_->v.reserve(1024);
-	impl_->buf.reset((char*)malloc(impl::bufsize));
 }
 
 packer::packer(packer&&) noexcept = default;
@@ -122,14 +117,14 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
 
 	for (error_code ec;;)
 	{
-		auto n = f(impl_->buf.get(), impl::reqsize, ec);
+		auto n = f(impl_->buf, impl::reqsize, ec);
 		if (ec)
 			throw std::system_error{ ec };
 		else if (n == 0)
 			break;
 
-		h.update(impl_->buf.get(), n);
-		cur_.offset += write_buffer(impl_->buf.get(), n);
+		h.update(impl_->buf, n);
+		cur_.offset += write_buffer(impl_->buf, n);
 	}
 
 	impl_->v.push_back({ { new_literal(arcname) },
