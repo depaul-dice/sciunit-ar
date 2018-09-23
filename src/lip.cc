@@ -29,6 +29,9 @@
 
 #include <stdex/hashlib.h>
 
+#include "raw_pass.h"
+#include "lz4_pass.h"
+
 namespace lip
 {
 
@@ -47,7 +50,8 @@ struct packer::impl
 	std::unique_ptr<char, c_delete> buf;
 
 	static constexpr auto npos = decltype(m)::CEDAR_NO_PATH;
-	static constexpr size_t bufsize = 64 * 1024;
+	static constexpr size_t reqsize = 64 * 1024;
+	static constexpr size_t bufsize = LZ4_COMPRESSBOUND(reqsize);
 
 	ptr get_bes(ptr base) const { return { base.offset + bss_size }; }
 
@@ -118,7 +122,7 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
 
 	for (error_code ec;;)
 	{
-		auto n = f(impl_->buf.get(), impl::bufsize, ec);
+		auto n = f(impl_->buf.get(), impl::reqsize, ec);
 		if (ec)
 			throw std::system_error{ ec };
 		else if (n == 0)
