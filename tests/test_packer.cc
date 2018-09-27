@@ -66,9 +66,10 @@ TEST_CASE("packer")
 		REQUIRE(contentof(*sym) == "../tmp"_sv);
 		REQUIRE(dir->size() == 0);
 		REQUIRE(contentof(*dir).empty());
-		REQUIRE(sym->digest != dir->digest);
-		REQUIRE(hexlify(sym->digest) == "12e0296f8b9dba8f7f0be0614c67d"
-		                                "108c160cba9ff496e256d98b1c2");
+		REQUIRE(sym->info.digest != dir->info.digest);
+		REQUIRE(hexlify(sym->info.digest) ==
+		        "12e0296f8b9dba8f7f0be0614c67d"
+		        "108c160cba9ff496e256d98b1c2");
 		REQUIRE(sym->type() == lip::ftype::is_symlink);
 		REQUIRE(dir->type() == lip::ftype::is_directory);
 		REQUIRE_FALSE(dir->is_executable());

@@ -93,20 +93,21 @@ inline ptr packer::new_literal(string_view arcname)
 
 void packer::add_directory(string_view arcname, ftime mtime)
 {
-	impl_->v.push_back(
-	    { { new_literal(arcname) }, {}, int(ftype::is_directory), mtime });
+	impl_->v.push_back({ { new_literal(arcname) },
+	                     { { int(ftype::is_directory) } },
+	                     mtime });
 }
 
 void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
 {
 	auto start = cur_;
 	cur_.offset += write_buffer(target.data(), target.size());
-	impl_->v.push_back({ { new_literal(arcname) },
-	                     { hashfn(target).digest() },
-	                     int(ftype::is_symlink),
-	                     mtime,
-	                     start,
-	                     cur_ });
+	impl_->v.push_back(
+	    { { new_literal(arcname) },
+	      { { int(ftype::is_symlink), hashfn(target).digest() } },
+	      mtime,
+	      start,
+	      cur_ });
 }
 
 void packer::add_regular_file(string_view arcname, ftime mtime,
@@ -128,8 +129,7 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
 	}
 
 	impl_->v.push_back({ { new_literal(arcname) },
-	                     { h.digest() },
-	                     ftype::is_regular_file | feat,
+	                     { { ftype::is_regular_file | feat, h.digest() } },
 	                     mtime,
 	                     start,
 	                     cur_ });

@@ -106,17 +106,27 @@ struct ptr
 
 using fhash = std::array<unsigned char, 28>;
 
+union finfo {
+	struct
+	{
+		uint32_t flag;
+		fhash digest;
+	};
+	struct
+	{
+		uint32_t flag_;
+		uint32_t reserved;
+		int64_t sizeopt;
+	};
+};
+
 struct fcard
 {
 	union {
 		ptr name;
 		char* arcname;
 	};
-	union {
-		fhash digest;
-		uint32_t sizeopt[2];
-	};
-	uint32_t flag;
+	finfo info;
 	ftime mtime;
 	ptr begin;
 	ptr end;
@@ -126,21 +136,21 @@ struct fcard
 	int64_t size() const
 	{
 		if (is_lz4_compressed())
-			return int64_t(sizeopt[1]) << 32 ^ sizeopt[0];
+			return info.sizeopt;
 		else
 			return stored_size();
 	}
 
-	ftype type() const { return static_cast<ftype>(flag & 0xf); }
+	ftype type() const { return static_cast<ftype>(info.flag & 0xf); }
 
 	bool is_lz4_compressed() const
 	{
-		return (flag & int(feature::lz4_compressed)) != 0;
+		return (info.flag & int(feature::lz4_compressed)) != 0;
 	}
 
 	bool is_executable() const
 	{
-		return (flag & int(feature::executable)) != 0;
+		return (info.flag & int(feature::executable)) != 0;
 	}
 };
 
