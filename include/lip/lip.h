@@ -106,7 +106,8 @@ struct ptr
 
 using fhash = std::array<unsigned char, 28>;
 
-union finfo {
+union finfo
+{
 	struct
 	{
 		uint32_t flag;
@@ -122,7 +123,8 @@ union finfo {
 
 struct fcard
 {
-	union {
+	union
+	{
 		ptr name;
 		char* arcname;
 	};

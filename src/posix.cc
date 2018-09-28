@@ -112,8 +112,7 @@ class file_descriptor
 public:
 	auto get_reader() const
 	{
-		return [fd = fd_](char* p, size_t sz, error_code& ec)
-		{
+		return [fd = fd_](char* p, size_t sz, error_code& ec) {
 			auto n = read(fd, p, sz);
 			if (n == -1)
 				ec.assign(errno, std::system_category());
