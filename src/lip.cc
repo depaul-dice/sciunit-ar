@@ -114,25 +114,23 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
                               refill_callback f, feature feat)
 {
 	auto start = cur_;
-	hashfn h;
+	io::raw_output_pass<hashfn, impl::reqsize> pass;
 
 	for (error_code ec;;)
 	{
-		auto n = f(impl_->buf, impl::reqsize, ec);
+		auto n = pass.make_available(f, impl_->buf, impl::bufsize, ec);
 		if (ec)
 			throw std::system_error{ ec };
 		else if (n == 0)
 			break;
 
-		h.update(impl_->buf, n);
 		cur_.offset += write_buffer(impl_->buf, n);
 	}
 
-	impl_->v.push_back({ { new_literal(arcname) },
-	                     { { ftype::is_regular_file | feat, h.digest() } },
-	                     mtime,
-	                     start,
-	                     cur_ });
+	auto info = pass.stat();
+	info.flag = ftype::is_regular_file | feat;
+	impl_->v.push_back(
+	    { { new_literal(arcname) }, info, mtime, start, cur_ });
 }
 
 void packer::write_bss()

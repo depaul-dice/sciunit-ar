@@ -26,4 +26,34 @@
 #ifndef _LIP_SRC_RAW__PASS_H
 #define _LIP_SRC_RAW__PASS_H
 
+#include <lip/lip.h>
+#include <assert.h>
+
+namespace lip
+{
+namespace io
+{
+
+template <class Hasher, size_t reqsize>
+class raw_output_pass
+{
+public:
+	template <class F>
+	size_t make_available(F&& f, char* bp, size_t blen, error_code& ec)
+	{
+		assert(reqsize <= blen);
+		auto n = std::forward<F>(f)(bp, reqsize, ec);
+		h_.update(bp, n);
+		return n;
+	}
+
+	finfo stat() const { return { { {}, h_.digest() } }; }
+
+private:
+	Hasher h_;
+};
+
+}
+}
+
 #endif
