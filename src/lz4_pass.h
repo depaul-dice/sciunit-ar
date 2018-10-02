@@ -26,6 +26,54 @@
 #ifndef _LIP_SRC_LZ4__PASS_H
 #define _LIP_SRC_LZ4__PASS_H
 
+#include <lip/lip.h>
 #include <lz4.h>
+#include <assert.h>
+
+namespace lip
+{
+namespace io
+{
+
+template <size_t reqsize>
+class lz4_output_pass
+{
+public:
+	lz4_output_pass() noexcept { LZ4_resetStream(handle_); }
+
+	template <class F>
+	size_t make_available(F&& f, char* bp, size_t blen, error_code& ec)
+	{
+		if (auto n = std::forward<F>(f)(buf_[i_], reqsize, ec))
+		{
+			total_ += n;
+			auto block_size = LZ4_compress_fast_continue(
+			    handle_, buf_[i_], bp + sizeof(int), int(n),
+			    int(blen - sizeof(int)), 1);
+			assert(block_size != 0);
+			::new (bp) int{ block_size };
+			i_ = !i_;
+			return sizeof(int) + size_t(block_size);
+		}
+		else
+			return n;
+	}
+
+	finfo stat() const
+	{
+		finfo info{};  // initialize padding bits
+		info.sizeopt = total_;
+		return info;
+	}
+
+private:
+	LZ4_stream_t handle_[1];
+	char buf_[2][reqsize];
+	size_t i_ = 0;
+	int64_t total_ = 0;
+};
+
+}
+}
 
 #endif

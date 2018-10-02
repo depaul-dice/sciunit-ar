@@ -28,6 +28,7 @@
 #include <vector>
 
 #include <stdex/hashlib.h>
+#include <stdex/oneof.h>
 
 #include "raw_pass.h"
 #include "lz4_pass.h"
@@ -45,9 +46,10 @@ struct packer::impl
 
 	static constexpr auto npos = decltype(m)::CEDAR_NO_PATH;
 	static constexpr size_t reqsize = 64 * 1024;
-	static constexpr size_t bufsize = LZ4_COMPRESSBOUND(reqsize);
+	static constexpr size_t bufsize =
+	    sizeof(int) + LZ4_COMPRESSBOUND(reqsize);
 
-	char buf[bufsize];
+	alignas(int) char buf[bufsize];
 
 	ptr get_bes(ptr base) const { return { base.offset + bss_size }; }
 
@@ -113,12 +115,25 @@ void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
 void packer::add_regular_file(string_view arcname, ftime mtime,
                               refill_callback f, feature feat)
 {
+	using raw = io::raw_output_pass<hashfn, impl::reqsize>;
+	using lz4 = io::lz4_output_pass<impl::reqsize>;
+
 	auto start = cur_;
-	io::raw_output_pass<hashfn, impl::reqsize> pass;
+	auto flag = ftype::is_regular_file | feat;
+	auto rep = flag & finfo::rep_mask;
+	auto pass = [=]() -> stdex::oneof<raw, lz4> {
+		if (rep == int(feature::lz4_compressed))
+			return lz4{};
+		else
+			return raw{};
+	}();
 
 	for (error_code ec;;)
 	{
-		auto n = pass.make_available(f, impl_->buf, impl::bufsize, ec);
+		auto n = pass.match([&](auto&& x) {
+			return x.make_available(f, impl_->buf, impl::bufsize,
+			                        ec);
+		});
 		if (ec)
 			throw std::system_error{ ec };
 		else if (n == 0)
@@ -127,8 +142,8 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
 		cur_.offset += write_buffer(impl_->buf, n);
 	}
 
-	auto info = pass.stat();
-	info.flag = ftype::is_regular_file | feat;
+	auto info = pass.match([](auto&& x) { return x.stat(); });
+	info.flag = flag;
 	impl_->v.push_back(
 	    { { new_literal(arcname) }, info, mtime, start, cur_ });
 }

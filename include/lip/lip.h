@@ -108,6 +108,9 @@ using fhash = std::array<unsigned char, 28>;
 
 union finfo
 {
+	static constexpr int type_mask = 0xf;
+	static constexpr int rep_mask = 0xff;
+
 	struct
 	{
 		uint32_t flag;
@@ -143,7 +146,10 @@ struct fcard
 			return stored_size();
 	}
 
-	ftype type() const { return static_cast<ftype>(info.flag & 0xf); }
+	ftype type() const
+	{
+		return static_cast<ftype>(info.flag & finfo::type_mask);
+	}
 
 	bool is_lz4_compressed() const
 	{
