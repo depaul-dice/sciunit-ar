@@ -25,10 +25,9 @@
 
 #include <lip/lip.h>
 #include <vvpkg/c_file_funcs.h>
+#include <vvpkg/fd_funcs.h>
 
 #ifdef _WIN32
-#include <io.h>
-#include <fcntl.h>
 #define U(s) L##s
 #define UF "%ls"
 #define UNF "%.*ls"
@@ -148,9 +147,7 @@ void create(param_type filename, param_type dirname, lip::archive_options opts)
 
 	if (filename == view_type(U("-")))
 	{
-#ifdef _WIN32
-		_setmode(_fileno(stdout), _O_BINARY);
-#endif
+		vvpkg::xstdout_fileno();
 		fp = stdout;
 	}
 	else
