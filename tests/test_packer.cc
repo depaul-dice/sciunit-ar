@@ -15,12 +15,10 @@ TEST_CASE("packer")
 	std::string s;
 	lip::packer pk;
 
-	auto f = [&](char const* p, size_t sz) {
+	pk.start([&](char const* p, size_t sz) {
 		s.append(p, sz);
 		return sz;
-	};
-
-	pk.start(f);
+	});
 
 	REQUIRE(s.size() == 8);
 	REQUIRE(s == "LIP\0\x33\xec\x08\00"_sv);

@@ -183,7 +183,8 @@ inline bool is_dots(char const* dirname)
 	return dirname == "."_sv || dirname == ".."_sv;
 }
 
-void archive(write_callback f, gbpath::param_type src, archive_options opts)
+void archive(std::function<write_sig> f, gbpath::param_type src,
+             archive_options opts)
 {
 	stack<std::pair<directory, gbpath>> stk;
 	packer pk;
@@ -193,7 +194,7 @@ void archive(write_callback f, gbpath::param_type src, archive_options opts)
 	if (fstat(stk.top().first.native_handle(), &st) == -1)
 		throw std::system_error{ errno, std::system_category() };
 
-	pk.start(f);
+	pk.start(std::move(f));
 	pk.add_directory(stk.top().second.friendly_name(),
 	                 archive_clock::from(st.st_mtim));
 

@@ -81,9 +81,9 @@ constexpr auto operator|(ftype a, feature b)
 	return uint32_t(a) | uint32_t(b);
 }
 
-void packer::start(write_callback f)
+void packer::start(std::function<write_sig> f)
 {
-	write_ = f;
+	write_ = std::move(f);
 	cur_.offset += write_struct(header{});
 }
 
@@ -113,7 +113,7 @@ void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
 }
 
 void packer::add_regular_file(string_view arcname, ftime mtime,
-                              refill_callback f, feature feat)
+                              stdex::signature<refill_sig> f, feature feat)
 {
 	using raw = io::raw_output_pass<hashfn, impl::reqsize>;
 	using lz4 = io::lz4_output_pass<impl::reqsize>;

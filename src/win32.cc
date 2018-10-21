@@ -27,7 +27,8 @@
 
 namespace lip
 {
-void archive(write_callback f, gbpath::param_type src, archive_options opts)
+void archive(std::function<write_sig> f, gbpath::param_type src,
+             archive_options opts)
 {
 }
 }

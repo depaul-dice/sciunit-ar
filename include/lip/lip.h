@@ -43,9 +43,9 @@ namespace chrono = std::chrono;
 
 using stdex::string_view;
 using std::error_code;
-using read_callback = stdex::signature<size_t(char*, size_t)>;
-using write_callback = stdex::signature<size_t(char const*, size_t)>;
-using refill_callback = stdex::signature<size_t(char*, size_t, error_code&)>;
+using read_sig = size_t(char*, size_t);
+using write_sig = size_t(char const*, size_t);
+using refill_sig = size_t(char*, size_t, error_code&);
 
 enum class ftype
 {
@@ -178,11 +178,11 @@ public:
 	packer& operator=(packer&&) noexcept;
 	~packer();
 
-	void start(write_callback f);
+	void start(std::function<write_sig> f);
 	void add_directory(string_view arcname, ftime);
 	void add_symlink(string_view arcname, ftime, string_view target);
-	void add_regular_file(string_view arcname, ftime, refill_callback,
-	                      feature = {});
+	void add_regular_file(string_view arcname, ftime,
+	                      stdex::signature<refill_sig>, feature = {});
 
 	void finish()
 	{
@@ -219,7 +219,7 @@ private:
 
 	ptr new_literal(string_view arcname);
 
-	write_callback write_;
+	std::function<write_sig> write_;
 	ptr cur_ = {};
 	std::unique_ptr<impl> impl_;
 };
@@ -256,7 +256,8 @@ struct archive_options
 	feature feat = {};
 };
 
-void archive(write_callback, gbpath::param_type src, archive_options = {});
+void archive(std::function<write_sig>, gbpath::param_type src,
+             archive_options = {});
 }
 
 #endif
