@@ -66,8 +66,7 @@ struct packer::impl
 	}
 };
 
-packer::packer()
-    : write_([](char const*, size_t x) { return x; }), impl_(new impl())
+packer::packer() : impl_(new impl())
 {
 	impl_->v.reserve(1024);
 }
