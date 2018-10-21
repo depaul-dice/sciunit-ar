@@ -105,6 +105,20 @@ inline void xlseek(int fd, int64_t offset)
 		throw std::system_error(errno, std::system_category());
 }
 
+inline auto xfstat(int fd)
+{
+#if defined(_WIN32)
+	struct _stat64 st;
+	int r = _fstat64(fd, &st);
+#else
+	struct stat st;
+	int r = fstat(fd, &st);
+#endif
+	if (r == -1)
+		throw std::system_error(errno, std::system_category());
+	return st;
+}
+
 inline size_t buffer_size_for(int fd) noexcept
 {
 #if defined(_WIN32)
@@ -146,5 +160,25 @@ inline auto to_descriptor(int fd)
 #endif
 	};
 }
+
+#if defined(_WIN32)
+
+struct _pread_fn;
+extern _pread_fn from_seekable_descriptor(int fd);
+
+#else
+
+inline auto from_seekable_descriptor(int fd)
+{
+	return [=](char* p, size_t sz, int64_t offset) {
+		auto n = ::pread(fd, p, sz, offset);
+		if (n == -1)
+			return size_t();
+		else
+			return size_t(n);
+	};
+}
+
+#endif
 
 }

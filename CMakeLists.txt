@@ -37,7 +37,12 @@ endif()
 include_directories(3rdparty/include)
 include_directories(include)
 
-set(lip_srcs src/lip.cc src/clock.cc src/blake2b.cc src/gbpath.cc)
+set(lip_srcs
+	src/lip.cc
+	src/clock.cc
+	src/blake2b.cc
+	src/gbpath.cc
+	src/fd_funcs.cc)
 if(WIN32)
 	list(APPEND lip_srcs src/win32.cc)
 else()
@@ -53,7 +58,7 @@ target_link_libraries(lip lz4)
 if(BUILD_TESTING)
 	add_executable(run ${tests_srcs})
 	target_link_libraries(run lip)
-	add_test(testall tests/run)
+	add_test(NAME testall COMMAND run WORKING_DIRECTORY ${CMAKE_SOURCE_DIR})
 endif()
 
 file(GLOB demo_srcs demo/*.cc)
