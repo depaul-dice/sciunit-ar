@@ -99,14 +99,14 @@ TEST_CASE("packer")
 			new char[s.size() - size_t(last[1].offset)]
 		};
 		auto indexp = last[0];
-		indexp.adjust(p.get() - last[1].offset);
+		indexp.adjust(p.get(), last[1]);
 
 		::new (indexp.pointer_to<lip::fcard>()) lip::fcard;
 		::new (indexp.pointer_to<lip::fcard>() + 1) lip::fcard;
 		memcpy(p.get(), s.data() + last[1].offset,
 		       s.size() - size_t(last[0].offset));
 		auto& first = *indexp.pointer_to<lip::fcard>();
-		first.name.adjust(p.get() - last[1].offset);
+		first.name.adjust(p.get(), last[1]);
 
 		REQUIRE(first.arcname == "first"_sv);
 		REQUIRE(first.type() == lip::ftype::is_regular_file);

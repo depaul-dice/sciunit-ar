@@ -199,15 +199,13 @@ index::index(stdex::signature<pread_sig> f, int64_t filesize)
 	bp_.reset(new char[blen]);
 	pread_exact(bp_.get(), blen, eof[1].offset);
 
-	auto assumed = bp_.get() - eof[1].offset;
-
-	eof[0].adjust(assumed);
+	eof[0].adjust(bp_.get(), eof[1]);
 	first_ = eof[0].pointer_to<fcard>();
-	endidx.adjust(assumed);
+	endidx.adjust(bp_.get(), eof[1]);
 	last_ = endidx.pointer_to<fcard>();
 
 	std::for_each(first_, last_,
-	              [=](fcard& fc) { fc.name.adjust(assumed); });
+	              [&](fcard& fc) { fc.name.adjust(bp_.get(), eof[1]); });
 }
 
 }

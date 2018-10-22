@@ -91,10 +91,10 @@ struct ptr
 {
 	int64_t offset;
 
-	void adjust(void const* base) &
+	void adjust(void const* base, ptr where = {}) &
 	{
-		auto p = reinterpret_cast<char const*>(base) + offset;
-		offset = reinterpret_cast<intptr_t>(p);
+		offset =
+		    reinterpret_cast<intptr_t>(base) + (offset - where.offset);
 	}
 
 	template <class T>
