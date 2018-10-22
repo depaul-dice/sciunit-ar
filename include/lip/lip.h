@@ -32,6 +32,7 @@
 #include <memory>
 #include <cerrno>
 #include <system_error>
+#include <algorithm>
 
 #include <stdex/functional.h>
 #include <stdex/string_view.h>
@@ -46,6 +47,7 @@ using std::error_code;
 using read_sig = size_t(char*, size_t);
 using write_sig = size_t(char const*, size_t);
 using refill_sig = size_t(char*, size_t, error_code&);
+using pread_sig = size_t(char*, size_t, int64_t);
 
 enum class ftype
 {
@@ -222,6 +224,37 @@ private:
 	std::function<write_sig> write_;
 	ptr cur_ = {};
 	std::unique_ptr<impl> impl_;
+};
+
+class index
+{
+public:
+	using iterator = fcard const*;
+
+	explicit index(stdex::signature<pread_sig> f, int64_t filesize);
+
+	iterator begin() const { return first_; }
+	iterator end() const { return last_; }
+	int size() const { return int(end() - begin()); }
+	bool empty() const { return size() == 0; }
+	fcard const& operator[](int i) const { return first_[i]; }
+
+	iterator find(string_view arcname) const
+	{
+		auto it =
+		    std::lower_bound(begin(), end(), arcname,
+		                     [](fcard const& fc, string_view target) {
+			                     return fc.arcname < target;
+		                     });
+		if (it != end() && it->arcname == arcname)
+			return it;
+		else
+			return end();
+	}
+
+private:
+	fcard *first_, *last_;
+	std::unique_ptr<char[]> bp_;
 };
 
 class gbpath

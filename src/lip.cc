@@ -183,4 +183,31 @@ void packer::write_section_pointers()
 	write_struct(impl_->get_bss(cur_));
 }
 
+index::index(stdex::signature<pread_sig> f, int64_t filesize)
+{
+	auto pread_exact = [=](char* p, size_t sz, int64_t from) mutable {
+		if (f(p, sz, from) != sz)
+			throw std::system_error{ errno,
+				                 std::system_category() };
+	};
+
+	ptr eof[2];
+	ptr endidx = { filesize - int64_t(sizeof(eof)) };
+
+	pread_exact(reinterpret_cast<char*>(eof), sizeof(eof), endidx.offset);
+	auto blen = size_t(filesize - eof[1].offset);
+	bp_.reset(new char[blen]);
+	pread_exact(bp_.get(), blen, eof[1].offset);
+
+	auto assumed = bp_.get() - eof[1].offset;
+
+	eof[0].adjust(assumed);
+	first_ = eof[0].pointer_to<fcard>();
+	endidx.adjust(assumed);
+	last_ = endidx.pointer_to<fcard>();
+
+	std::for_each(first_, last_,
+	              [=](fcard& fc) { fc.name.adjust(assumed); });
+}
+
 }

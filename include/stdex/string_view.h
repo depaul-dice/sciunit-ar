@@ -366,6 +366,34 @@ struct basic_string_view
 		return !(a == b);
 	}
 
+	friend
+	bool operator<(basic_string_view a, basic_string_view b)
+	{
+		auto len = (std::min)(a.size(), b.size());
+		if (auto r = traits_type::compare(a.data(), b.data(), len))
+			return r < 0;
+		else
+			return a.size() < b.size();
+	}
+
+	friend
+	bool operator>(basic_string_view a, basic_string_view b)
+	{
+		return b < a;
+	}
+
+	friend
+	bool operator<=(basic_string_view a, basic_string_view b)
+	{
+		return !(b < a);
+	}
+
+	friend
+	bool operator>=(basic_string_view a, basic_string_view b)
+	{
+		return !(a < b);
+	}
+
 private:
 	struct traits_eq
 	{
