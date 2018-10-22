@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\3rdparty",
+    "\\demo",
+    "\\include",
+    "\\include\\FileSystem",
+    "\\include\\lip",
+    "\\include\\vvpkg",
+    "\\src",
+    "\\tests"
+  ],
+  "SelectedNode": "\\include\\FileSystem\\File.h",
+  "PreviewInSolutionExplorer": false
+}

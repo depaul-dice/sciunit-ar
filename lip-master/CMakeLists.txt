@@ -45,10 +45,14 @@ else()
 endif()
 file(GLOB tests_srcs tests/*.cc)
 
+
+
 add_library(lip ${lip_srcs})
 add_library(lz4 3rdparty/src/lz4.c)
+add_library(FS src/File.cc)
 
-target_link_libraries(lip lz4)
+
+target_link_libraries(lip lz4 FS)
 
 if(BUILD_TESTING)
 	add_executable(run ${tests_srcs})

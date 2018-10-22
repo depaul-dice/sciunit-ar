@@ -32,6 +32,14 @@
 #include "raw_pass.h"
 #include "lz4_pass.h"
 
+#include <FileSystem/File.h>
+
+// TODO:: fix the unsigned/signed implicit conversions here I wanna ensure that
+// making the ptr unsigned truely will have no side effect i think I saw some
+// offset and bit fieldy shennagins having to do with when compression is
+// turned on so I wanna get a battery of test cases written before I change
+// that.
+
 namespace lip
 {
 
@@ -64,6 +72,9 @@ struct packer::impl
 	}
 };
 
+// TODO:: this :write_([]... shows compiler error for visual studio but it
+// builds I'm worried that this may indicate a warning that's not shown by
+// default investigate further
 packer::packer()
     : write_([](char const*, size_t x) { return x; }), impl_(new impl())
 {
@@ -80,7 +91,7 @@ constexpr auto operator|(ftype a, feature b)
 }
 
 void packer::start(write_callback f)
-{
+{  // warning: implicit unsigned signed conversion
 	write_ = f;
 	cur_.offset += write_struct(header{});
 }
@@ -99,7 +110,7 @@ void packer::add_directory(string_view arcname, ftime mtime)
 }
 
 void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
-{
+{  // warning unsigned signed conversion
 	auto start = cur_;
 	cur_.offset += write_buffer(target.data(), target.size());
 	impl_->v.push_back(
@@ -169,4 +180,72 @@ void packer::write_section_pointers()
 	write_struct(impl_->get_bss(cur_));
 }
 
+// NOTE:: below this line I'm implementing the LIP class I want to restructure
+// a lot of this to hide the implementation of the LIP file so I'm going to
+// implement the new features like read, find file, read index etc... inside
+// the LIP class
+
+// The idea is to be able to query the file and let the implementation details
+// be handled magically
+LIP::LIP(const char* const filePath)
+{  // This constructor is not ideal for making new LIP's as it includes a check
+   // for if is valid, which would not work for making new LIP's
+	// but for now this will get me started, it's going to be confusing to
+	// a user who wants to make a new lip at a given filepath.
+
+	//I'm making this very messy just to verify the steps for reading a lip from a filepath
+	//TODO:: clean this function up a lot
+
+	// May wanna do read/write by default
+	// this opens the underlying file
+	File::Open(this->fh, filePath, File::Mode::READ);
+
+	// this ensures the filepath provided was a LIP
+	char buffer[4] = { 0x00 };
+	File::Read(this->fh, buffer, 4);
+	assert(buffer[0] == 'L');
+	assert(buffer[1] == 'I');
+	assert(buffer[2] == 'P');
+	assert(buffer[3] == 0);
+	File::Seek(this->fh, File::Location::BEGIN, 0);
+
+	// this seeks to the pointer that is under the index that contains the pointer for the top of the index
+	File::Seek(this->fh, File::Location::END, -2 * sizeof(ptr));
+
+	//finds the offset for the bottom of the index
+	unsigned int BottomOfIndex = 0;
+	File::Tell(this->fh, BottomOfIndex);
+
+	// this gets the pointer to the top of the index
+	int64_t indexTopOffset;
+	File::Read(this->fh, &indexTopOffset, sizeof(ptr));
+
+	printf("bottom of index at %i and indexTopPtr at %i", BottomOfIndex,
+	       indexTopOffset);
+
+	int64_t indexSize = BottomOfIndex - indexTopOffset;
+
+	assert(indexSize % 64 == 0);
+	//go to the top of the index so I can read it into a buffer
+	File::Seek(this->fh, File::Location::BEGIN, indexTopOffset);
+
+	char* rawIndexBuffer = new char[indexSize];
+
+	File::Read(this->fh, rawIndexBuffer, indexSize);
+	//pass the raw buffer of bytes for the index and the size of it to the index class so it can populate
+	LIPIndex.FillIndex(rawIndexBuffer, indexSize);
+	
+	// File::Seek(this->fh, File::CURRENT, sizeof(ptr) +);
+}
+
+// Index& LIP::getIndex()
+//{
+//	return LIPIndex;
+//};
+//
+//
+// LIP::~LIP()
+//{
+//	File::Close(fh);
+//};
 }

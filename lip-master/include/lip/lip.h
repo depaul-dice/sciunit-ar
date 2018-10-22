@@ -36,6 +36,9 @@
 #include <stdex/functional.h>
 #include <stdex/string_view.h>
 
+#include <FileSystem/File.h>
+#include <assert.h>
+
 namespace lip
 {
 
@@ -251,6 +254,64 @@ struct archive_options
 };
 
 void archive(write_callback, gbpath::param_type src, archive_options = {});
+
+// TODO:: make this easy serializable and deserializable so that it can be
+// pulled to and from disk to a nice little structure the packer struct is cool
+// and all but it could be much more strightforward to add things to the LIP if
+// i had an existing lip on disk and I wanted to append I could load it into a
+// LIP class and then add things I'm not focusing on this functionality now
+// because it isn't explicitly needed. The goal is though to deal with the LIP
+// class as an abstraction of the file itself and expose any necessary methods
+// and hide all implementation details behind a nice clean interface
+class LIP
+{
+public:
+	class Index
+	{
+		fcard* indexPtr;
+		uint numCards;
+
+	public:
+
+		Index() : indexPtr(0) {}
+
+		void FillIndex(char* rawIndexBuffer, int64_t size) 
+		{
+			assert(size % 64 == 0);
+
+			numCards = size / sizeof(fcard);
+
+			indexPtr = (fcard*)rawIndexBuffer;
+		}
+
+		~Index()
+		{
+			if (indexPtr != nullptr)
+				delete indexPtr;
+		}
+
+		// returns the number of fcards in the index
+		uint getIndexSize() { return numCards; }
+	};
+
+private:
+	File::Handle fh;
+	Index LIPIndex;
+
+public:
+	LIP(const char* const filePath);
+	~LIP() { File::Close(fh); }
+
+	LIP(const LIP&) = delete;
+	LIP operator=(const LIP&) = delete;
+
+	Index* getIndex() { return &LIPIndex; }
+};
 }
 
 #endif
+
+// bonus documentation as I go
+// so the very first thing that's written by the packer is the header structure
+// it writes LIP\0 in the first 4 bytes of the file so it can be used as a
+// check to make sure the path fed is a LIP
