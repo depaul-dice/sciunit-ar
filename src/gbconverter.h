@@ -27,6 +27,7 @@
 #define LIP_GBCONVERTER_H
 
 #include <stdexcept>
+#include <new>
 #include <assert.h>
 
 #ifdef _WIN32
@@ -39,13 +40,45 @@
 
 namespace lip
 {
-class gbconverter
+
+#if !defined(_WIN32)
+class iconv_resource
 {
 public:
-	gbconverter() = default;
-	gbconverter(gbconverter const&) = delete;
-	gbconverter& operator=(gbconverter const&) = delete;
+	iconv_resource(char const* dstname, char const* srcname)
+	    : cd_(iconv_open(dstname, srcname))
+	{
+		if (cd_ == (iconv_t)-1)
+			throw std::system_error{ errno,
+				                 std::system_category() };
+	}
 
+	iconv_resource(iconv_resource&& x) noexcept : cd_(x.cd_)
+	{
+		x.cd_ = (iconv_t)-1;
+	}
+
+	iconv_resource& operator=(iconv_resource&& x) noexcept
+	{
+		return *::new ((void*)this) iconv_resource{ std::move(x) };
+	}
+
+	iconv_t get() const noexcept { return cd_; }
+
+	~iconv_resource()
+	{
+		if (cd_ != (iconv_t)-1)
+			iconv_close(cd_);
+	}
+
+private:
+	iconv_t cd_;
+};
+#endif
+
+class gbfromsys
+{
+public:
 #ifdef _WIN32
 	size_t convert(wchar_t const* from, size_t len, char* to,
 	               size_t buflen)
@@ -67,21 +100,10 @@ public:
 #else
 	size_t convert(char const* from, size_t len, char* to, size_t buflen)
 	{
-
-		static auto cd = [] {
-			auto d = iconv_open("gb18030", nl_langinfo(CODESET));
-			if (d == (iconv_t)-1)
-				throw std::system_error{
-					errno, std::system_category()
-				};
-			return d;
-		}();
-		cd_ = cd;
-
 		errno = 0;
 		auto left = buflen;
 		auto p = const_cast<char*>(from);
-		if (iconv(cd_, &p, &len, &to, &left) == 0)
+		if (iconv(cd_.get(), &p, &len, &to, &left) == 0)
 		{
 			assert(len == 0);
 			return buflen - left;
@@ -92,18 +114,11 @@ public:
 			throw std::invalid_argument{ "convert" };
 	}
 
-	~gbconverter()
-	{
-		if (cd_ != (iconv_t)-1)
-			iconv_close(cd_);
-	}
-
 private:
-	iconv_t cd_ = (iconv_t)-1;
+	iconv_resource cd_{ "gb18030", nl_langinfo(CODESET) };
 #endif
 };
 
-static gbconverter gb;
 }
 
 #endif

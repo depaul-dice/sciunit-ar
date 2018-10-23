@@ -36,6 +36,7 @@ namespace lip
 struct gbpath::impl
 {
 	std::vector<char> name;
+	std::shared_ptr<gbfromsys> gb = std::make_shared<gbfromsys>();
 };
 
 gbpath::gbpath(char_type const* s) : impl_(new impl)
@@ -43,13 +44,15 @@ gbpath::gbpath(char_type const* s) : impl_(new impl)
 	if (auto len = std::char_traits<char_type>::length(s))
 	{
 		impl_->name.resize(4 * len);
-		auto nbytes =
-		    gb.convert(s, len, impl_->name.data(), impl_->name.size());
+		auto nbytes = impl_->gb->convert(s, len, impl_->name.data(),
+		                                 impl_->name.size());
 		impl_->name.resize(nbytes);
 	}
 }
 
-gbpath::gbpath(gbpath const& other) : impl_(new impl(*other.impl_)) {}
+gbpath::gbpath(gbpath const& other) : impl_(new impl(*other.impl_))
+{
+}
 
 gbpath& gbpath::operator=(gbpath const& other)
 {
@@ -77,7 +80,7 @@ void gbpath::push_back(char_type const* s)
 	auto pfxlen = impl_->name.size();
 	impl_->name.resize(pfxlen + buflen);
 	auto p = impl_->name.data() + pfxlen;
-	auto nbytes = gb.convert(s, len, p, buflen);
+	auto nbytes = impl_->gb->convert(s, len, p, buflen);
 	impl_->name.resize(pfxlen + nbytes);
 }
 
