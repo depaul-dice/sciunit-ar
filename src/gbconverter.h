@@ -40,8 +40,8 @@
 
 namespace lip
 {
-
 #if !defined(_WIN32)
+
 class iconv_resource
 {
 public:
@@ -63,7 +63,21 @@ public:
 		return *::new ((void*)this) iconv_resource{ std::move(x) };
 	}
 
-	iconv_t get() const noexcept { return cd_; }
+	size_t convert(char const* from, size_t len, char* to, size_t buflen)
+	{
+		errno = 0;
+		auto left = buflen;
+		auto p = const_cast<char*>(from);
+		if (iconv(cd_, &p, &len, &to, &left) == 0)
+		{
+			assert(len == 0);
+			return buflen - left;
+		}
+		else if (errno == E2BIG)
+			throw std::out_of_range{ "convert size" };
+		else
+			throw std::invalid_argument{ "convert" };
+	}
 
 	~iconv_resource()
 	{
@@ -74,12 +88,26 @@ public:
 private:
 	iconv_t cd_;
 };
-#endif
+
+class gbfromsys : iconv_resource
+{
+public:
+	gbfromsys() : iconv_resource("gb18030", nl_langinfo(CODESET)) {}
+	using iconv_resource::convert;
+};
+
+class gbtosys : iconv_resource
+{
+public:
+	gbtosys() : iconv_resource(nl_langinfo(CODESET), "gb18030") {}
+	using iconv_resource::convert;
+};
+
+#else
 
 class gbfromsys
 {
 public:
-#ifdef _WIN32
 	size_t convert(wchar_t const* from, size_t len, char* to,
 	               size_t buflen)
 	{
@@ -97,28 +125,31 @@ public:
 			default: __assume(0);
 			}
 	}
-#else
-	size_t convert(char const* from, size_t len, char* to, size_t buflen)
-	{
-		errno = 0;
-		auto left = buflen;
-		auto p = const_cast<char*>(from);
-		if (iconv(cd_.get(), &p, &len, &to, &left) == 0)
-		{
-			assert(len == 0);
-			return buflen - left;
-		}
-		else if (errno == E2BIG)
-			throw std::out_of_range{ "convert size" };
-		else
-			throw std::invalid_argument{ "convert" };
-	}
-
-private:
-	iconv_resource cd_{ "gb18030", nl_langinfo(CODESET) };
-#endif
 };
 
+class gbtosys
+{
+public:
+	size_t convert(char const* from, size_t len, wchar_t* to,
+	               size_t buflen)
+	{
+		if (int n =
+		        MultiByteToWideChar(54936, WC_ERR_INVALID_CHARS, from,
+		                            int(len), to, int(buflen)))
+			return n;
+		else
+			switch (GetLastError())
+			{
+			case ERROR_INSUFFICIENT_BUFFER:
+				throw std::out_of_range{ "convert size" };
+			case ERROR_NO_UNICODE_TRANSLATION:
+				throw std::invalid_argument{ "convert" };
+			default: __assume(0);
+			}
+	}
+};
+
+#endif
 }
 
 #endif
