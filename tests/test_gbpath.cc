@@ -50,4 +50,10 @@ TEST_CASE("unicode path" *
 
 	a.push_back(LU("\u6d4b\u8bd5"));
 	REQUIRE(a.friendly_name() == "\x81\x35\xf3\x33/\xb2\xe2\xca\xd4"_sv);
+
+	lip::native_gbpath b;
+	b.assign(a.friendly_name());
+	stdex::basic_string_view<lip::gbpath::char_type> s =
+	    LU("\u1e31/\u6d4b\u8bd5");
+	REQUIRE(b.data() == s);
 }

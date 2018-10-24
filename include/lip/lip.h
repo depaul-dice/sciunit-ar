@@ -283,6 +283,22 @@ private:
 	std::unique_ptr<impl> impl_;
 };
 
+class native_gbpath
+{
+public:
+	native_gbpath();
+	native_gbpath(native_gbpath&&) noexcept;
+	native_gbpath& operator=(native_gbpath&&) noexcept;
+	~native_gbpath();
+
+	void assign(string_view filename);
+	auto data() const noexcept -> gbpath::param_type;
+
+private:
+	struct impl;
+	std::unique_ptr<impl> impl_;
+};
+
 struct archive_options
 {
 	bool one_level = false;

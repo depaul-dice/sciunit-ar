@@ -95,4 +95,33 @@ void gbpath::pop_back()
 {
 	preserve_until_last(impl_->name, '/');
 }
+
+struct native_gbpath::impl
+{
+	std::vector<gbpath::char_type> rep;
+	gbtosys gb;
+};
+
+native_gbpath::native_gbpath() : impl_(new impl)
+{
+}
+
+native_gbpath::native_gbpath(native_gbpath&&) noexcept = default;
+native_gbpath& native_gbpath::operator=(native_gbpath&&) noexcept = default;
+native_gbpath::~native_gbpath() = default;
+
+void native_gbpath::assign(string_view filename)
+{
+	auto len = filename.size() * 2;
+	impl_->rep.resize(len + 1);
+	auto n = impl_->gb.convert(filename.data(), filename.size(),
+	                           impl_->rep.data(), len);
+	impl_->rep[n] = {};
+}
+
+auto native_gbpath::data() const noexcept -> gbpath::param_type
+{
+	return impl_->rep.data();
+}
+
 }
