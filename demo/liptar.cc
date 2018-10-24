@@ -26,6 +26,7 @@
 #include <lip/lip.h>
 #include <vvpkg/c_file_funcs.h>
 #include <vvpkg/fd_funcs.h>
+#include <stdex/defer.h>
 
 #ifdef _WIN32
 #define U(s) L##s
@@ -106,6 +107,7 @@ struct args
 
 static void create(param_type filename, param_type dirname,
                    lip::archive_options);
+static void list(param_type filename);
 
 #ifdef _WIN32
 int wmain(int argc, wchar_t* argv[])
@@ -123,6 +125,10 @@ int main(int argc, char* argv[])
 				throw command_error{ a.cmd,
 					             "missing directory" };
 			create(a.archive_file, a.directory, a.opts);
+		}
+		else if (a.cmd == U("tf"))
+		{
+			list(a.archive_file);
 		}
 		else
 			throw command_error{ a.cmd, "unrecognized command" };
@@ -157,4 +163,21 @@ void create(param_type filename, param_type dirname, lip::archive_options opts)
 	}
 
 	lip::archive(vvpkg::to_c_file(fp), dirname, opts);
+}
+
+void list(param_type filename)
+{
+	auto idx = [=] {
+		auto fd = vvpkg::xopen_for_read(filename);
+		defer(vvpkg::xclose(fd));
+		return lip::index(vvpkg::from_seekable_descriptor(fd),
+		                  vvpkg::xfstat(fd).st_size);
+	}();
+
+	lip::native_gbpath cvt;
+	for (auto&& fc : idx)
+	{
+		cvt.assign(fc.arcname);
+		printf(UF "\n", cvt.data());
+	}
 }
