@@ -771,7 +771,7 @@ struct variant_layout<true, T...>
 {
 	static constexpr bool trivial = true;
 
-	int index;
+	int index = 0;
 	variant_storage<T...> data;
 };
 
