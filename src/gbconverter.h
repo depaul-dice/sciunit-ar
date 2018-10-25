@@ -135,7 +135,7 @@ public:
 	               size_t buflen)
 	{
 		if (int n =
-		        MultiByteToWideChar(54936, WC_ERR_INVALID_CHARS, from,
+		        MultiByteToWideChar(54936, MB_ERR_INVALID_CHARS, from,
 		                            int(len), to, int(buflen)))
 			return n;
 		else

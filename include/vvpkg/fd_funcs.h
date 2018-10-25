@@ -30,6 +30,19 @@ inline int xopen_for_read(char const* filename)
 	return fd;
 }
 
+#if defined(_WIN32)
+inline int xopen_for_read(wchar_t const* filename)
+{
+	int fd;
+	_wsopen_s(&fd, filename, _O_RDONLY | _O_BINARY, _SH_DENYWR, 0);
+
+	if (fd == -1)
+		throw std::system_error(errno, std::system_category());
+
+	return fd;
+}
+#endif
+
 inline int xopen_for_write_only(char const* filename)
 {
 #if defined(_WIN32)
@@ -163,8 +176,17 @@ inline auto to_descriptor(int fd)
 
 #if defined(_WIN32)
 
-struct _pread_fn;
-extern _pread_fn from_seekable_descriptor(int fd);
+struct _pread_fn
+{
+	size_t operator()(char* p, size_t sz, int64_t offset);
+
+	int fd;
+};
+
+inline _pread_fn from_seekable_descriptor(int fd)
+{
+	return { fd };
+}
 
 #else
 

@@ -36,6 +36,14 @@ TEST_CASE("gbpath")
 
 	a.pop_back();
 	REQUIRE(a.friendly_name().empty());
+
+	a = b;
+	REQUIRE(a.friendly_name() == "new"_sv);
+	REQUIRE(a.friendly_name() == b.friendly_name());
+
+	a.push_back(U("okay"));
+	b = std::move(a);
+	REQUIRE(b.friendly_name() == "new/okay"_sv);
 }
 
 #ifdef _WIN32
@@ -56,4 +64,8 @@ TEST_CASE("unicode path" *
 	stdex::basic_string_view<lip::gbpath::char_type> s =
 	    LU("\u1e31/\u6d4b\u8bd5");
 	REQUIRE(b.data() == s);
+
+	lip::native_gbpath c;
+	c = std::move(b);
+	REQUIRE(c.data() == s);
 }

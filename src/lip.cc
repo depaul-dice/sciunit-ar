@@ -66,13 +66,13 @@ struct packer::impl
 	}
 };
 
-packer::packer() : impl_(new impl())
+packer::packer() : impl_(new impl)
 {
 	impl_->v.reserve(1024);
 }
 
-packer::packer(packer&&) noexcept = default;
-packer& packer::operator=(packer&&) noexcept = default;
+packer::packer(packer&&) = default;
+packer& packer::operator=(packer&&) = default;
 packer::~packer() = default;
 
 constexpr auto operator|(ftype a, feature b)

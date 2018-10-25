@@ -176,8 +176,8 @@ class packer
 {
 public:
 	packer();
-	packer(packer&&) noexcept;
-	packer& operator=(packer&&) noexcept;
+	packer(packer&&);
+	packer& operator=(packer&&);
 	~packer();
 
 	void start(std::function<write_sig> f);

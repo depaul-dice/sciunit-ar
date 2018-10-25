@@ -10,18 +10,9 @@ namespace vvpkg
 
 #if defined(_WIN32)
 
-struct _pread_fn
+size_t _pread_fn::operator()(char* p, size_t sz, int64_t offset)
 {
-	size_t operator()(char* p, size_t sz, int64_t offset)
-	{
-	}
-
-	int fd;
-};
-
-_pread_fn from_seekable_descriptor(int fd)
-{
-	return { fd };
+	return 0;
 }
 
 #endif
