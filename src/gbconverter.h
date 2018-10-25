@@ -60,6 +60,7 @@ public:
 
 	iconv_resource& operator=(iconv_resource&& x) noexcept
 	{
+		this->~iconv_resource();
 		return *::new ((void*)this) iconv_resource{ std::move(x) };
 	}
 
