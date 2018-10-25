@@ -209,31 +209,8 @@ LIP::LIP(const char* const filePath)
 	assert(buffer[3] == 0);
 	File::Seek(this->fh, File::Location::BEGIN, 0);
 
-	// this seeks to the pointer that is under the index that contains the pointer for the top of the index
-	File::Seek(this->fh, File::Location::END, -2 * sizeof(ptr));
-
-	//finds the offset for the bottom of the index
-	unsigned int BottomOfIndex = 0;
-	File::Tell(this->fh, BottomOfIndex);
-
-	// this gets the pointer to the top of the index
-	int64_t indexTopOffset;
-	File::Read(this->fh, &indexTopOffset, sizeof(ptr));
-
-	printf("bottom of index at %i and indexTopPtr at %i", BottomOfIndex,
-	       indexTopOffset);
-
-	int64_t indexSize = BottomOfIndex - indexTopOffset;
-
-	assert(indexSize % 64 == 0);
-	//go to the top of the index so I can read it into a buffer
-	File::Seek(this->fh, File::Location::BEGIN, indexTopOffset);
-
-	char* rawIndexBuffer = new char[indexSize];
-
-	File::Read(this->fh, rawIndexBuffer, indexSize);
-	//pass the raw buffer of bytes for the index and the size of it to the index class so it can populate
-	LIPIndex.FillIndex(rawIndexBuffer, indexSize);
+	
+	LIPIndex.FillIndex(this->fh);
 	
 	// File::Seek(this->fh, File::CURRENT, sizeof(ptr) +);
 }

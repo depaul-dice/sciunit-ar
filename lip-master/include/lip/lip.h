@@ -38,6 +38,7 @@
 
 #include <FileSystem/File.h>
 #include <assert.h>
+#include <list>
 
 namespace lip
 {
@@ -108,6 +109,10 @@ struct ptr
 };
 
 using fhash = std::array<unsigned char, 28>;
+// class fhash
+//{
+//	unsigned char hash[28];
+//};
 
 union finfo
 {
@@ -115,6 +120,7 @@ union finfo
 	{
 		uint32_t flag;
 		fhash digest;
+		// unsigned char digest[28];
 	};
 	struct
 	{
@@ -148,6 +154,11 @@ struct fcard
 
 	ftype type() const { return static_cast<ftype>(info.flag & 0xf); }
 
+	bool isDirectory() const
+	{
+		return this->type() == ftype::is_directory;
+	}
+
 	bool is_lz4_compressed() const
 	{
 		return (info.flag & int(feature::lz4_compressed)) != 0;
@@ -156,6 +167,57 @@ struct fcard
 	bool is_executable() const
 	{
 		return (info.flag & int(feature::executable)) != 0;
+	}
+
+	int64_t getSize() { return end - begin; }
+
+	ftime getCreationTime() { return mtime; }
+
+	static bool CheckEquality(fcard& lhs, fcard& rhs)
+	{
+		// TODO:: expand on this to continue checking various
+		// attributes
+		bool retval = false;
+
+		if (CheckType(lhs, rhs))
+		{
+			if (lhs.type() == ftype::is_directory)
+			{  // break this into directory equality
+				if (CheckName(lhs, rhs))
+				{
+					retval = true;
+				}
+			}
+			else
+			{  // break this into file equality
+				if (CheckHash(lhs, rhs))
+				{
+					retval = true;
+				}
+			}
+		}
+		return retval;
+	}
+
+private:
+	static bool CheckType(fcard& lhs, fcard& rhs) {}
+	static bool CheckName(fcard& lhs, fcard& rhs) {}
+
+	static bool CheckHash(fcard& lhs, fcard& rhs)
+	{
+		// TODO:: must set this from 28 to pull the digest length.
+		// because if the lengh of the hash changes it throws
+		// everything off
+		bool retval = true;
+		for (int i = 0; i < 28; i++)
+		{
+			if (lhs.info.digest[i] != rhs.info.digest[i])
+			{
+				retval = false;
+			}
+		}
+
+		return retval;
 	}
 };
 
@@ -268,18 +330,51 @@ class LIP
 public:
 	class Index
 	{
+		File::Handle fh;
 		fcard* indexPtr;
 		uint numCards;
 
+		// TODO:: move the iterator function externally
+		fcard* currentPtr;
+
 	public:
+		Index() : fh(0), indexPtr(0), numCards(0), currentPtr(0) {}
 
-		Index() : indexPtr(0) {}
-
-		void FillIndex(char* rawIndexBuffer, int64_t size) 
+		void FillIndex(File::Handle _fh)
 		{
-			assert(size % 64 == 0);
+			this->fh = _fh;
+			// this seeks to the pointer that is under the index
+			// that contains the pointer for the top of the index
+			File::Seek(this->fh, File::Location::END,
+			           -2l * (long)sizeof(ptr));
 
-			numCards = size / sizeof(fcard);
+			// finds the offset for the bottom of the index
+			long BottomOfIndex = 0;
+			File::Tell(this->fh, BottomOfIndex);
+
+			// this gets the pointer to the top of the index
+			int64_t indexTopOffset;
+			File::Read(this->fh, &indexTopOffset, sizeof(ptr));
+
+			// printf("bottom of index at %l and indexTopPtr at
+			// %l", BottomOfIndex, indexTopOffset);
+
+			int64_t indexSize = BottomOfIndex - indexTopOffset;
+
+			assert(indexSize % 64 == 0);
+			// go to the top of the index so I can read it into a
+			// buffer
+			File::Seek(this->fh, File::Location::BEGIN,
+			           indexTopOffset);
+
+			// theese lines pull the raw bytes for the index from
+			// the file and cast them to an array of fcards that
+			// make up the index.
+			char* rawIndexBuffer = new char[indexSize];
+
+			File::Read(this->fh, rawIndexBuffer, indexSize);
+
+			numCards = indexSize / (long)sizeof(fcard);
 
 			indexPtr = (fcard*)rawIndexBuffer;
 		}
@@ -292,6 +387,94 @@ public:
 
 		// returns the number of fcards in the index
 		uint getIndexSize() { return numCards; }
+
+		void dumpIndex()
+		{
+			// This saves the location that the index was on to
+			// restore it after the dump just in case the user
+			// calls this in the middle of iteration
+			fcard* temp = currentPtr;
+
+			currentPtr = indexPtr;
+
+			char name[FILENAME_MAX];
+
+			printf("Beginning Index Dump-------------");
+			for (unsigned int i = 0; i < numCards; i++)
+			{
+				printf("Dumping Fcard-------------\n");
+				printf("File size: %ld \n",
+				       currentPtr->getSize());
+
+				// TODO:: add debug printing for creation time
+				// printf("Creation time %llu \n",
+				// currentPtr->getCreationTime());
+
+				// print hash
+				printf("File hash = ");
+				for (int j = 0; j < 28; j++)
+				{
+					printf("%02X",
+					       currentPtr->info.digest[j]);
+				}
+				printf("\n");
+
+				// end print hash
+
+				// print name
+				File::Seek(fh, File::Location::BEGIN,
+				           currentPtr->name.offset);
+				File::ReadLine(fh, name, FILENAME_MAX);
+
+				printf("Fcard %s\n", name);
+				// end print name
+				printf("End Card ----------------\n");
+				getNext();
+			}
+			printf("End Index Dump -----------------");
+			currentPtr = temp;
+		}
+
+		void resetItr() { currentPtr = nullptr; }
+
+		fcard* getNext()
+		{
+			if (currentPtr == nullptr)
+			{
+				currentPtr = indexPtr;
+			}
+			else if ((currentPtr - indexPtr) >= numCards - 1)
+			{
+				currentPtr = nullptr;
+			}
+			else
+			{
+				currentPtr++;
+			}
+			return currentPtr;
+		}
+
+		// TODO:: make a filename buffer class just to add a bit of
+		// safety here so a user can know they wont overhoot thier
+		// buffer
+		void getName(fcard* indexItem, char* filenameBuffer)
+		{
+			File::Seek(fh, File::Location::BEGIN,
+			           indexItem->name.offset);
+			File::ReadLine(fh, filenameBuffer, FILENAME_MAX);
+		}
+
+		char* getFile(fcard* indexOfItemToRetrieve, int64_t& fileSize)
+		{
+			fileSize = indexOfItemToRetrieve->getSize();
+			File::Seek(fh, File::Location::BEGIN,
+			           indexOfItemToRetrieve->begin.offset);
+
+			char* fileByteBuffer = new char[fileSize];
+
+			File::Read(fh, fileByteBuffer, fileSize);
+			return fileByteBuffer;
+		}
 	};
 
 private:
@@ -299,6 +482,7 @@ private:
 	Index LIPIndex;
 
 public:
+	LIP();
 	LIP(const char* const filePath);
 	~LIP() { File::Close(fh); }
 
@@ -306,6 +490,208 @@ public:
 	LIP operator=(const LIP&) = delete;
 
 	Index* getIndex() { return &LIPIndex; }
+
+	void Unpack() {}
+
+	void UnpackAt(const char* const _filePath)
+	{
+		// TODO:: optimize the string/char buffer insanity here this is
+		// a first pass.
+
+		// TODO:: Zhiaho says lip is sorted in a way that upon
+		// iteration you will always visit the parents before any of
+		// it's children so I can clean this up substnatially by
+		// iterating once and switching behavior based on directory or
+		// file
+		std::string filePathPrefix = _filePath;
+		// this removes a trailing slash if it's on the provided path
+		// because I keep the / from the files
+		if (filePathPrefix.back() == '/')
+		{
+			filePathPrefix.pop_back();
+		}
+
+		std::string concatenatedFilePath = "";
+
+		std::list<std::string> directoryList;
+
+		// makes base directory
+		File::MakeDirectory(_filePath);
+
+		LIPIndex.resetItr();
+		fcard* currentItem = LIPIndex.getNext();
+
+		char filePathBuffer[FILENAME_MAX];
+
+		// iterate through all fcards and grab the pathnames of all
+		// directories
+		while (currentItem != nullptr)
+		{
+			if (currentItem->isDirectory())
+			{
+				LIPIndex.getName(currentItem, filePathBuffer);
+
+				// filePathToClean = filePathBuffer;
+
+				directoryList.push_front(
+				    std::string(filePathBuffer));
+			}
+
+			currentItem = LIPIndex.getNext();
+		}
+
+		// sort directories by length so that higher directories are
+		// created first
+		// TODO:: confirm that default sort sorts strings by string
+		// length
+		directoryList.sort();
+
+		// now directoryList has list of every directory that must be
+		// created for the files to be unpacked successfully
+
+		// grab the garbage path from the beginning of the root file of
+		// the lip
+		std::string filePathPrefixToRemoveFromLIP =
+		    directoryList.front();
+
+		filePathPrefixToRemoveFromLIP.erase(
+		    filePathPrefixToRemoveFromLIP.rfind('/'),
+		    filePathPrefixToRemoveFromLIP.npos);
+
+		// Create all required directories
+		std::string toAdd;
+		while (directoryList.size() > 0)
+		{
+			toAdd = directoryList.front();
+
+			toAdd.erase(0, filePathPrefixToRemoveFromLIP.length());
+
+			toAdd = filePathPrefix + toAdd;
+
+			File::MakeDirectory(toAdd.c_str());
+
+			directoryList.pop_front();
+		}
+
+		// unpack all files
+		LIPIndex.resetItr();
+		currentItem = LIPIndex.getNext();
+
+		File::Handle unpackHandle;
+		std::string filePathToClean = "";
+
+		while (currentItem != nullptr)
+		{
+			if (!currentItem->isDirectory())
+			{
+				LIPIndex.getName(currentItem, filePathBuffer);
+
+				filePathToClean = filePathBuffer;
+
+				filePathToClean.erase(
+				    0, filePathPrefixToRemoveFromLIP.length());
+
+				concatenatedFilePath =
+				    filePathPrefix + filePathToClean;
+
+				File::Open(unpackHandle,
+				           concatenatedFilePath.c_str(),
+				           File::WRITE);
+
+				int64_t fileSize;
+
+				char* fileBytes =
+				    LIPIndex.getFile(currentItem, fileSize);
+
+				File::Write(unpackHandle, fileBytes, fileSize);
+
+				File::Close(unpackHandle);
+				delete fileBytes;
+			}
+
+			currentItem = LIPIndex.getNext();
+		}
+	}
+
+	class PossibbleMatch
+	{
+		Index index1;
+		fcard card1;
+		Index index2;
+		fcard card2;
+
+		PossibbleMatch(Index i1, fcard c1, Index i2, fcard c2)
+		{
+			index1 = i1;
+			card1 = c1;
+			index2 = i2;
+			card2 = c2;
+		}
+	};
+
+	class FullMatch : public PossibbleMatch
+	{
+
+
+
+	};
+
+	class PartialMatch : public PossibbleMatch
+	{
+
+	};
+
+
+	void diff(LIP& rhs)
+	{
+		std::list<fcard> lhsAll;
+		std::list<fcard> rhsAll;
+		std::list<PossibbleMatch> PossibbleMatch;
+
+		this->LIPIndex.resetItr();
+
+		fcard* cardPtr = this->LIPIndex.getNext();
+
+		while (cardPtr != nullptr)
+		{
+
+			cardPtr = this->LIPIndex.getNext();
+		}
+
+		rhs.LIPIndex.resetItr();
+		cardPtr = rhs.LIPIndex.getNext();
+
+		while (cardPtr != nullptr)
+		{
+
+			cardPtr = this->LIPIndex.getNext();
+		}
+
+		// for each card in lhsAll look for name match in rhsAll pop
+		// both and add create an entry on the possibble match list
+		// NOTE:: for the sake of name testing I'm removing the leading
+		// stuff before the root directory and also the name of the root
+		// directory itself allowing LIP1 and LIP2 to have name matches
+		// even if in different directories with different roots
+
+		// check each possibble match for full match via hash
+
+		// put hash matches on a full match list as they are identical
+		// files
+
+		// put name matches that fail hash match onto Partial Match
+		// list
+
+		// output
+
+		// print out full matches
+
+		// print out all remaining files in lhsAll
+
+		// print out all remaining files in rhsAll
+
+		// return the list of partial matches for further diffing
+	}
 };
 }
 
