@@ -193,14 +193,11 @@ LIP::LIP(const char* const filePath)
 	// but for now this will get me started, it's going to be confusing to
 	// a user who wants to make a new lip at a given filepath.
 
-	//I'm making this very messy just to verify the steps for reading a lip from a filepath
-	//TODO:: clean this function up a lot
-
 	// May wanna do read/write by default
 	// this opens the underlying file
 	File::Open(this->fh, filePath, File::Mode::READ);
 
-	// this ensures the filepath provided was a LIP
+	// this ensures the filepath provided was to a LIP
 	char buffer[4] = { 0x00 };
 	File::Read(this->fh, buffer, 4);
 	assert(buffer[0] == 'L');
@@ -209,10 +206,9 @@ LIP::LIP(const char* const filePath)
 	assert(buffer[3] == 0);
 	File::Seek(this->fh, File::Location::BEGIN, 0);
 
-	
+	//Populates the index from the handle
 	LIPIndex.FillIndex(this->fh);
 	
-	// File::Seek(this->fh, File::CURRENT, sizeof(ptr) +);
 }
 
 // Index& LIP::getIndex()

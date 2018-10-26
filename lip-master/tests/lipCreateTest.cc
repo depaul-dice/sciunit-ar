@@ -41,6 +41,7 @@ void PrintCurrentPath()
 }
 
 #define testDataLIP1Root "./tests/testData/Lip1"
+#define testDataLIP2Root "./tests/testData/Lip2"
 #define testDataLIP1Output "./tests/testData/Lip1.lip"
 #define testDataLIP2Output "./tests/testData/Lip2.lip"
 #define testDataUnpackDirectory "./tests/testData/Output"
@@ -113,7 +114,7 @@ TEST_CASE("lipDIFF,TextFilesOnly,NoSubDIR,NoSymlink")
 
 	REQUIRE(fileExists("./tests/testData/Lip2/TextDocumentEqual.txt"));
 	REQUIRE(fileExists("./tests/testData/Lip2/TextDocumentMatchedButDiffContent.txt"));
-	REQUIRE(fileExists("./tests/testData/Lip2/TextDocumentNoMatch"));
+	REQUIRE(fileExists("./tests/testData/Lip2/TextDocumentOppositeNoMatch.txt"));
 
 	// creating LIP
 
@@ -129,7 +130,7 @@ TEST_CASE("lipDIFF,TextFilesOnly,NoSubDIR,NoSymlink")
 	// reading lip index
 	LIP lip2(testDataLIP2Output);
 
-	LIP::Index* index = t.getIndex();
+	LIP::Index* index = lip2.getIndex();
 
 	REQUIRE(index->getIndexSize() == 4);
 
@@ -145,7 +146,7 @@ TEST_CASE("lipDIFF,TextFilesOnly,NoSubDIR,NoSymlink")
 	//		REQUIRE(temp == check);
 
 	// unpacking LIP
-	t.UnpackAt(testDataUnpackDirectory);
+	lip2.UnpackAt(testDataUnpackDirectory);
 
 	REQUIRE(fileExists("./tests/testData/Output/Lip2/TextDocumentEqual.txt"));
 
@@ -153,12 +154,15 @@ TEST_CASE("lipDIFF,TextFilesOnly,NoSubDIR,NoSymlink")
 	                   "TextDocumentMatchedButDiffContent.txt"));
 
 	REQUIRE(fileExists(
-	    "./tests/testData/Output/Lip2/TextDocumentNoMatch.txt"));
+	    "./tests/testData/Output/Lip2/TextDocumentOppositeNoMatch.txt"));
 	
-	//DIFF
 
-	lip1(testDataLIP1Output);
+	//TODO:: finish the asserts for the diff test, I need to implement the return structure for the diff operation first though. 
+	//DIFF
+	LIP lip1(testDataLIP1Output);
 
 	lip1.diff(lip2);
+
+	printf("End Diff\n");
 
 }

@@ -1,12 +1,14 @@
 {
   "ExpandedNodes": [
     "",
-    "\\3rdparty",
-    "\\include\\FileSystem",
-    "\\include\\lip",
-    "\\include\\vvpkg",
+    "\\3rdparty\\include\\cedar",
+    "\\3rdparty\\src",
+    "\\demo",
     "\\src",
-    "\\tests"
+    "\\tests",
+    "\\tests\\testData",
+    "\\_gnuDiff",
+    "\\_gnuDiff\\include"
   ],
   "SelectedNode": "\\tests\\lipCreateTest.cc",
   "PreviewInSolutionExplorer": false
