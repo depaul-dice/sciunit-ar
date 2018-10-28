@@ -33,7 +33,6 @@
 
 #include <stack>
 #include <utility>
-#include <vector>
 #include <new>
 
 namespace lip
@@ -174,9 +173,6 @@ inline auto directory::open(char const* basename, int flags) -> file_descriptor
 	    openat(native_handle(), basename, flags | O_CLOEXEC));
 }
 
-template <class T>
-using stack = std::stack<T, std::vector<T>>;
-
 inline bool is_dots(char const* dirname)
 {
 	using namespace stdex::literals;
@@ -186,7 +182,7 @@ inline bool is_dots(char const* dirname)
 void archive(std::function<write_sig> f, gbpath::param_type src,
              archive_options opts)
 {
-	stack<std::pair<directory, gbpath>> stk;
+	std::stack<std::pair<directory, gbpath>> stk;
 	packer pk;
 	struct stat st;
 
