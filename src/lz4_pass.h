@@ -26,6 +26,8 @@
 #ifndef _LIP_SRC_LZ4__PASS_H
 #define _LIP_SRC_LZ4__PASS_H
 
+#include "io_pass.h"
+
 #include <lip/lip.h>
 #include <lz4.h>
 #include <assert.h>
@@ -35,28 +37,27 @@ namespace lip
 namespace io
 {
 
-template <size_t reqsize>
 class lz4_output_pass
 {
 public:
 	lz4_output_pass() noexcept { LZ4_resetStream(handle_); }
 
 	template <class F>
-	size_t make_available(F&& f, char* bp, size_t blen, error_code& ec)
+	avail make_available(F&& f, error_code& ec)
 	{
 		if (auto n = std::forward<F>(f)(buf_[i_], reqsize, ec))
 		{
 			total_ += n;
 			auto block_size = LZ4_compress_fast_continue(
-			    handle_, buf_[i_], bp + sizeof(int), int(n),
-			    int(blen - sizeof(int)), 1);
+			    handle_, buf_[i_], obuf_ + sizeof(int), int(n),
+			    int(sizeof(obuf_) - sizeof(int)), 1);
 			assert(block_size != 0);
-			::new (bp) int{ block_size };
+			::new (obuf_) int{ block_size };
 			i_ = !i_;
-			return sizeof(int) + size_t(block_size);
+			return { obuf_, sizeof(int) + size_t(block_size) };
 		}
 		else
-			return n;
+			return { obuf_, n };
 	}
 
 	finfo stat() const
@@ -67,12 +68,14 @@ public:
 	}
 
 private:
+	static constexpr size_t reqsize = 65536;
+
 	LZ4_stream_t handle_[1];
 	char buf_[2][reqsize];
+	alignas(int) char obuf_[sizeof(int) + LZ4_COMPRESSBOUND(reqsize)];
 	size_t i_ = 0;
 	int64_t total_ = 0;
 };
-
 }
 }
 

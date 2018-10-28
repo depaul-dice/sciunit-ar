@@ -23,35 +23,18 @@
  * SUCH DAMAGE.
  */
 
-#ifndef _LIP_SRC_RAW__PASS_H
-#define _LIP_SRC_RAW__PASS_H
-
-#include "io_pass.h"
-
-#include <lip/lip.h>
+#ifndef _LIP_SRC_IO__PASS_H
+#define _LIP_SRC_IO__PASS_H
 
 namespace lip
 {
 namespace io
 {
 
-template <class Hasher>
-class raw_output_pass
+struct avail
 {
-public:
-	template <class F>
-	avail make_available(F&& f, error_code& ec)
-	{
-		auto n = std::forward<F>(f)(buf_, sizeof(buf_), ec);
-		h_.update(buf_, n);
-		return { buf_, n };
-	}
-
-	finfo stat() const { return { { {}, h_.digest() } }; }
-
-private:
-	char buf_[65536];
-	Hasher h_;
+	char const* ptr;
+	size_t nbytes;
 };
 
 }

@@ -45,11 +45,6 @@ struct packer::impl
 	int64_t bss_size = 0;
 
 	static constexpr auto npos = decltype(m)::CEDAR_NO_PATH;
-	static constexpr size_t reqsize = 64 * 1024;
-	static constexpr size_t bufsize =
-	    sizeof(int) + LZ4_COMPRESSBOUND(reqsize);
-
-	alignas(int) char buf[bufsize];
 
 	ptr get_bes(ptr base) const { return { base.offset + bss_size }; }
 
@@ -114,8 +109,8 @@ void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
 void packer::add_regular_file(string_view arcname, ftime mtime,
                               stdex::signature<refill_sig> f, feature feat)
 {
-	using raw = io::raw_output_pass<hashfn, impl::reqsize>;
-	using lz4 = io::lz4_output_pass<impl::reqsize>;
+	using raw = io::raw_output_pass<hashfn>;
+	using lz4 = io::lz4_output_pass;
 
 	auto start = cur_;
 	auto flag = ftype::is_regular_file | feat;
@@ -129,19 +124,17 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
 
 	for (error_code ec;;)
 	{
-		auto n = pass.match([&](auto&& x) {
-			return x.make_available(f, impl_->buf, impl::bufsize,
-			                        ec);
-		});
+		auto r = pass.match(
+		    [&](auto& x) { return x.make_available(f, ec); });
 		if (ec)
 			throw std::system_error{ ec };
-		else if (n == 0)
+		else if (r.nbytes == 0)
 			break;
 
-		cur_.offset += write_buffer(impl_->buf, n);
+		cur_.offset += write_buffer(r.ptr, r.nbytes);
 	}
 
-	auto info = pass.match([](auto&& x) { return x.stat(); });
+	auto info = pass.match([](auto& x) { return x.stat(); });
 	info.flag = flag;
 	impl_->v.push_back(
 	    { { new_literal(arcname) }, info, mtime, start, cur_ });
