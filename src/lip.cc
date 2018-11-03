@@ -201,4 +201,25 @@ index::index(stdex::signature<pread_sig> f, int64_t filesize)
 	              [&](fcard& fc) { fc.name.adjust(bp_.get(), eof[1]); });
 }
 
+void content::copy(fcard const& fc, stdex::signature<write_sig> g) &&
+{
+	using raw = io::raw_regional_input_pass;
+	auto pass = raw(fc.begin.offset, fc.end.offset);
+
+	for (error_code ec;;)
+	{
+		auto r = pass.make_available(f_, ec);
+		if (!ec)
+		{
+			if (r.nbytes == 0)
+				break;
+			else if (g(r.ptr, r.nbytes) == r.nbytes)
+				continue;
+			else
+				ec.assign(errno, std::system_category());
+		}
+		throw std::system_error{ ec };
+	}
+}
+
 }

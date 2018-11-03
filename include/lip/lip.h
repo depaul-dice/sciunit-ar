@@ -239,6 +239,14 @@ public:
 	bool empty() const { return size() == 0; }
 	fcard const& operator[](int i) const { return first_[i]; }
 
+	fcard const& operator[](string_view arcname) const
+	{
+		auto it = find(arcname);
+		if (it == end())
+			throw std::out_of_range{ "not found" };
+		return *it;
+	}
+
 	iterator find(string_view arcname) const
 	{
 		auto it =
@@ -255,6 +263,30 @@ public:
 private:
 	fcard *first_, *last_;
 	std::unique_ptr<char[]> bp_;
+};
+
+class content
+{
+public:
+	explicit content(stdex::signature<pread_sig> f) noexcept : f_(f) {}
+
+	auto retrieve(fcard const& fc) && -> std::string
+	{
+		if (fc.size() > 64 * 1024)
+			throw std::invalid_argument{ "oversized" };
+
+		std::string s;
+		std::move(*this).copy(fc, [&](char const* p, size_t sz) {
+			s.append(p, sz);
+			return sz;
+		});
+		return s;
+	}
+
+	void copy(fcard const& fc, stdex::signature<write_sig>) &&;
+
+private:
+	stdex::signature<pread_sig> f_;
 };
 
 class gbpath

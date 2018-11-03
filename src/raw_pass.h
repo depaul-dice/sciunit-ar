@@ -54,6 +54,30 @@ private:
 	Hasher h_;
 };
 
+class raw_regional_input_pass
+{
+public:
+	raw_regional_input_pass(int64_t where, int64_t end) noexcept
+	    : where_(where), end_(end)
+	{
+	}
+
+	template <class F>
+	avail make_available(F&& f, error_code& ec)
+	{
+		auto x = (std::min)(int64_t(sizeof(buf_)), end_ - where_);
+		auto n = std::forward<F>(f)(buf_, size_t(x), where_);
+		if (n != size_t(x))
+			ec.assign(errno, std::system_category());
+		where_ += int64_t(n);
+		return { buf_, n };
+	}
+
+private:
+	char buf_[65536];
+	int64_t where_, end_;
+};
+
 }
 }
 
