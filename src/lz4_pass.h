@@ -62,7 +62,9 @@ public:
 
 	finfo stat() const
 	{
-		finfo info{};  // initialize padding bits
+		finfo info;
+		info.flag_ = 0;
+		info.reserved = 0;
 		info.sizeopt = total_;
 		return info;
 	}
