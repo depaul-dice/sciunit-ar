@@ -1,0 +1,9 @@
+image:
+  - Ubuntu
+
+build_script:
+  - cmake -DCMAKE_BUILD_TYPE=Release .
+  - make -j2
+
+test_script:
+  - ./tests/run
