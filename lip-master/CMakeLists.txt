@@ -51,13 +51,12 @@ add_library(lip ${lip_srcs})
 add_library(lz4 3rdparty/src/lz4.c)
 add_library(FS src/File.cc)
 
-
 target_link_libraries(lip lz4 FS)
 
 if(BUILD_TESTING)
-	add_executable(run ${tests_srcs})
-	target_link_libraries(run lip)
-	add_test(testall tests/run)
+	add_executable(liprun ${tests_srcs})
+	target_link_libraries(liprun lip)
+	add_test(testall tests/liprun)
 endif()
 
 file(GLOB demo_srcs demo/*.cc)

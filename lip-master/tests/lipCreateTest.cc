@@ -54,8 +54,8 @@ void PrintCurrentPath()
 // unpack and a compare to origonal sourceMaterial
 TEST_CASE("lipCreate,TextFilesOnly,NoSubDIR,NoSymlink")
 {
-	PrintCurrentPath();
-	//verifying test files
+		PrintCurrentPath();
+		//verifying test files
 
 		REQUIRE(fileExists("./tests/testData/Lip1/TextDocumentEqual.txt"));
 
@@ -64,8 +64,7 @@ TEST_CASE("lipCreate,TextFilesOnly,NoSubDIR,NoSymlink")
 		REQUIRE(fileExists("./tests/testData/Lip1/TextDocumentNotMatched.txt"));
 	
 
-	//creating LIP
-	
+		//creating LIP
 		FILE* fileHandle = fopen(testDataLIP1Output, "w");
 
 		REQUIRE(fileHandle != nullptr);
@@ -164,5 +163,4 @@ TEST_CASE("lipDIFF,TextFilesOnly,NoSubDIR,NoSymlink")
 	lip1.diff(lip2);
 
 	printf("End Diff\n");
-
 }

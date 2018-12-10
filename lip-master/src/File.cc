@@ -32,7 +32,7 @@ File::Error File::Open(File::Handle& fh, const char* const fileName,
 
 	File::Error retval = File::Error::SUCCESS;
 
-	if (fh != 0)
+	if (fh == 0)
 	{
 		retval = OPEN_FAIL;
 	}
@@ -54,7 +54,7 @@ File::Error File::Close(File::Handle& fh)
 }
 
 File::Error File::Write(File::Handle& fh, const void* const buffer,
-                        const size_t inSize)
+                        const int64_t inSize)
 {
 	// TODO:: add checks for number of chunks written. also make a version
 	// to send an array of elements of size.
@@ -70,7 +70,7 @@ File::Error File::Write(File::Handle& fh, const void* const buffer,
 }
 
 File::Error File::Read(File::Handle& fh, void* const buffer,
-                       const size_t outSize)
+                       const int64_t outSize)
 {
 	// unsigned int read; //could check to see that the bytes that were
 	// supposed to be read were all read
@@ -78,6 +78,21 @@ File::Error File::Read(File::Handle& fh, void* const buffer,
 	File::Error retval = File::Error::SUCCESS;
 	// if (!ReadFile(fh, buffer, inSize, read, 0))
 	if (!fread(buffer, outSize, 1, fh))
+	{
+		retval = File::Error::READ_FAIL;
+	}
+
+	return retval;
+}
+
+File::Error File::Read(File::Handle& fh, void* const buffer,
+                       const int64_t outSize, int64_t& bytesRead)
+{
+	bytesRead = fread(buffer, outSize, 1, fh);
+
+	File::Error retval = File::Error::SUCCESS;
+	// if (!ReadFile(fh, buffer, inSize, read, 0))
+	if (!bytesRead)
 	{
 		retval = File::Error::READ_FAIL;
 	}
@@ -115,7 +130,7 @@ File::Error File::Seek(File::Handle& fh, File::Location location, long offset)
 	return retval;
 }
 
-File::Error File::Tell(File::Handle& fh, long& offset)
+File::Error File::Tell(File::Handle& fh, int64_t& offset)
 {
 	File::Error retval = File::Error::TELL_FAIL;
 

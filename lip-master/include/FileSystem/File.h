@@ -1,8 +1,12 @@
 #ifndef FILE_H
 #define FILE_H
 
-// Make the assumption of c-char strings, not UNICODE
-// 32 bit files, not supporting 64 bits yet
+#include <assert.h>
+
+#include <stdio.h>
+#include <sys/stat.h>
+#include <unistd.h>
+#include <ftw.h>
 
 class File
 {
@@ -52,14 +56,18 @@ public:
 	                        File::Mode mode);
 	static File::Error Close(File::Handle& fh);
 	static File::Error Write(File::Handle& fh, const void* const buffer,
-	                         const size_t inSize);
+	                         const int64_t inSize);
 	static File::Error Read(File::Handle& fh, void* const _buffer,
-	                        const size_t _size);
+	                        const int64_t _size);
+
+	static File::Error Read(File::Handle& fh, void* const _buffer,
+	                        const int64_t _size, int64_t& bytesRead);
+
 	static File::Error ReadLine(File::Handle& fh, char* const buffer,
 	                            const int maxSize);
 	static File::Error Seek(File::Handle& fh, File::Location location,
 	                        long offset);
-	static File::Error Tell(File::Handle& fh, long& offset);
+	static File::Error Tell(File::Handle& fh, int64_t& offset);
 	static File::Error Flush(File::Handle& fh);
 
 	//Directory operations I may break this out into Directory.h and Directory.cc for cleanliness
@@ -88,18 +96,53 @@ public:
 
 		~Handle() { File::Close(fh); }
 	};*/
+};
 
+
+class readOnlyFileHandle
+{
+protected:
+
+	File::Handle handle;
+
+	public:
+
+	readOnlyFileHandle(){}
+
+	readOnlyFileHandle(const char* fileName)
+	{
+		assert(File::SUCCESS == File::Open(handle, fileName, File::READ));
+	}
+
+	virtual void Close() { File::Close(handle); }
+
+	virtual int64_t Read(void* const _buffer, const int64_t _size)
+	{
+		int64_t bytesRead = 0;
+		File::Read(handle, _buffer, _size, bytesRead);
+		return bytesRead;
+	}
+
+	virtual void Seek(int64_t offset, File::Location fileLocation = File::Location::BEGIN)
+	{
+		File::Seek(handle, fileLocation, offset);
+	}
+
+	virtual int64_t Tell()
+	{ 
+		int64_t offset;
+		File::Tell(handle, offset);
+		return offset;
+	}
+
+	//TODO:: consider adding bytes read, i am not currently because you can just read till null
+	virtual void ReadLine(char* const buffer, const int maxSize)
+	{
+		File::ReadLine(handle, buffer, maxSize);
+	}
 
 };
 
-//class RAIIHandle
-//{
-//	File::Handle fh;
-//
-//	RAIIHandle(const char* const fileName, File::Mode mode) { fh = fopen(fileName, File::getMode(mode)); }
-//
-//	~RAIIHandle() { File::Close(fh); }
-//};
 
 #endif
 

@@ -187,29 +187,65 @@ void packer::write_section_pointers()
 
 // The idea is to be able to query the file and let the implementation details
 // be handled magically
+//LIP::LIP(const char* const filePath)
+//{  // This constructor is not ideal for making new LIP's as it includes a check
+//   // for if is valid, which would not work for making new LIP's
+//	// but for now this will get me started, it's going to be confusing to
+//	// a user who wants to make a new lip at a given filepath.
+//
+//	// May wanna do read/write by default
+//	// this opens the underlying file
+//	File::Open(this->fh, filePath, File::Mode::READ);
+//
+//	// this ensures the filepath provided was to a LIP
+//	char buffer[4] = { 0x00 };
+//	File::Read(this->fh, buffer, 4);
+//	assert(buffer[0] == 'L');
+//	assert(buffer[1] == 'I');
+//	assert(buffer[2] == 'P');
+//	assert(buffer[3] == 0);
+//	File::Seek(this->fh, File::Location::BEGIN, 0);
+//
+//	// Populates the index from the handle
+//	LIPIndex.FillIndex(this->fh);
+//}
+
+
+//Lips objects are read only they are created via the packer
 LIP::LIP(const char* const filePath)
-{  // This constructor is not ideal for making new LIP's as it includes a check
-   // for if is valid, which would not work for making new LIP's
-	// but for now this will get me started, it's going to be confusing to
-	// a user who wants to make a new lip at a given filepath.
+{
 
-	// May wanna do read/write by default
-	// this opens the underlying file
-	File::Open(this->fh, filePath, File::Mode::READ);
-
+	fh = new readOnlyFileHandle(filePath);
+	
 	// this ensures the filepath provided was to a LIP
 	char buffer[4] = { 0x00 };
-	File::Read(this->fh, buffer, 4);
+	fh->Read(buffer, 4);
 	assert(buffer[0] == 'L');
 	assert(buffer[1] == 'I');
 	assert(buffer[2] == 'P');
 	assert(buffer[3] == 0);
-	File::Seek(this->fh, File::Location::BEGIN, 0);
-
-	//Populates the index from the handle
-	LIPIndex.FillIndex(this->fh);
+	fh->Seek(0);
 	
-}
+	// Populates the index from the handle
+	LIPIndex.FillIndex(this->fh);
+};
+
+LIP::LIP(readOnlyFileHandle* readOnlyHandle)
+{
+	fh = readOnlyHandle;
+
+	char buffer[4] = { 0x00 };
+	fh->Read(buffer, 4);
+	assert(buffer[0] == 'L');
+	assert(buffer[1] == 'I');
+	assert(buffer[2] == 'P');
+	assert(buffer[3] == 0);
+	fh->Seek(0);
+
+	// Populates the index from the handle
+	LIPIndex.FillIndex(this->fh);
+};
+   
 
 // Index& LIP::getIndex()
 //{
