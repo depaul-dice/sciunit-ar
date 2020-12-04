@@ -1,0 +1,15 @@
+{
+  "ExpandedNodes": [
+    "",
+    "\\3rdparty\\include\\cedar",
+    "\\3rdparty\\src",
+    "\\demo",
+    "\\src",
+    "\\tests",
+    "\\tests\\testData",
+    "\\_gnuDiff",
+    "\\_gnuDiff\\include"
+  ],
+  "SelectedNode": "\\tests\\lipCreateTest.cc",
+  "PreviewInSolutionExplorer": false
+}
