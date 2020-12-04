@@ -57,7 +57,7 @@ struct packer::impl
 	ptr get_bss(ptr base) const
 	{
 		constexpr int x = alignof(int64_t);
-		return { base.offset / x * x };
+        return { (base.offset + (x - 1)) / x * x };
 	}
 };
 
@@ -142,18 +142,21 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
 
 void packer::write_bss()
 {
-	std::vector<char> s;
-	cedar::npos_t from = 0;
-	size_t sz = 0;
-	auto& m = impl_->m;
-	for (int i = m.begin(from, sz); i != impl::npos; i = m.next(from, sz))
+    // align for the start of bss
+    auto diff_ = size_t(impl_->get_bss(cur_).offset - cur_.offset);
+    cur_.offset += write_buffer("\0\0\0\0\0\0\0", diff_);
+    std::vector<char> s;
+    cedar::npos_t from = 0;
+    size_t sz = 0;
+    auto& m = impl_->m;
+    for (int i = m.begin(from, sz); i != impl::npos; i = m.next(from, sz))
 	{
 		s.resize(sz + 1);
 		m.suffix(s.data(), sz, from);
 		impl_->v[size_t(i)].name = impl_->get_bes(cur_);
 		impl_->bss_size += write_buffer(s.data(), s.size());
 	}
-
+    // align here for the end of bss
 	auto diff = size_t(impl_->get_index(cur_).offset -
 	                   impl_->get_bes(cur_).offset);
 	write_buffer("\0\0\0\0\0\0\0", diff);
@@ -161,6 +164,9 @@ void packer::write_bss()
 
 void packer::write_index()
 {
+    // align for the start of index
+    auto diff_ = size_t(impl_->get_index(cur_).offset - impl_->get_bes(cur_).offset);
+    write_buffer("\0\0\0\0\0\0\0", diff_);
 	cedar::npos_t from = 0;
 	size_t sz = 0;
 	auto& m = impl_->m;
@@ -185,8 +191,11 @@ index::index(stdex::signature<pread_sig> f, int64_t filesize)
 	};
 
 	ptr eof[2];
-	ptr endidx = { filesize - int64_t(sizeof(eof)) };
+    // points to location of ptrToTopofIndex in LIP
+    ptr endidx = { filesize - int64_t(sizeof(eof)) };
 
+    // this reads the two pointers at the end of LIP: ptrToTopofIndex and ptrToBss
+    // eof[0] = ptrToTopofIndex. eof[1] = ptrToBss
 	pread_exact(reinterpret_cast<char*>(eof), sizeof(eof), endidx.offset);
 	auto blen = size_t(filesize - eof[1].offset);
 	bp_.reset(new char[blen]);
