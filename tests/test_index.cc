@@ -42,11 +42,11 @@ TEST_CASE("index")
 		randombuf input(1000);
 
 		pk.add_symlink("tmp/self", lip::archive_clock::now(),
-		               "../tmp");
-		pk.add_directory("tmp", lip::archive_clock::now());
-		pk.add_symlink("second", lip::archive_clock::now(), "first");
+		               "../tmp", 0, 0, 0, 0);
+		pk.add_directory("tmp", lip::archive_clock::now(), 0, 0, 0, 0);
+		pk.add_symlink("second", lip::archive_clock::now(), "first", 0, 0, 0, 0);
 		pk.add_regular_file(
-		    "first", lip::archive_clock::now(),
+		    "first", lip::archive_clock::now(), 0, 0, 0, 0,
 		    [&](char* p, size_t sz, std::error_code&) {
 			    return static_cast<size_t>(
 			        input.sgetn(p, std::streamsize(sz)));

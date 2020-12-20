@@ -87,14 +87,16 @@ inline ptr packer::new_literal(string_view arcname)
 	return {};
 }
 
-void packer::add_directory(string_view arcname, ftime mtime)
+void packer::add_directory(string_view arcname, ftime mtime, __off_t  msize,
+                           __uid_t uid, __gid_t gid, __mode_t permissions)
 {
 	impl_->v.push_back({ { new_literal(arcname) },
 	                     { { int(ftype::is_directory) } },
-	                     mtime });
+	                     mtime, msize, uid, gid, permissions });
 }
 
-void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
+void packer::add_symlink(string_view arcname, ftime mtime, string_view target, __off_t  msize,
+                         __uid_t uid, __gid_t gid, __mode_t permissions)
 {
 	auto start = cur_;
 	cur_.offset += write_buffer(target.data(), target.size());
@@ -102,11 +104,16 @@ void packer::add_symlink(string_view arcname, ftime mtime, string_view target)
 	    { { new_literal(arcname) },
 	      { { int(ftype::is_symlink), hashfn(target).digest() } },
 	      mtime,
+	      msize,
+	      uid,
+	      gid,
+	      permissions,
 	      start,
 	      cur_ });
 }
 
-void packer::add_regular_file(string_view arcname, ftime mtime,
+void packer::add_regular_file(string_view arcname, ftime mtime, __off_t  msize,
+                              __uid_t uid, __gid_t gid, __mode_t permissions,
                               stdex::signature<refill_sig> f, feature feat)
 {
 	using raw = io::raw_output_pass<hashfn>;
@@ -137,7 +144,12 @@ void packer::add_regular_file(string_view arcname, ftime mtime,
 	auto info = pass.match([](auto& x) { return x.stat(); });
 	info.flag = flag;
 	impl_->v.push_back(
-	    { { new_literal(arcname) }, info, mtime, start, cur_ });
+	    { { new_literal(arcname) }, info, mtime,
+          msize,
+          uid,
+          gid,
+          permissions,
+          start, cur_ });
 }
 
 void packer::write_bss()
@@ -198,11 +210,11 @@ index::index(stdex::signature<pread_sig> f, int64_t filesize)
     // eof[0] = ptrToTopofIndex. eof[1] = ptrToBss
 	pread_exact(reinterpret_cast<char*>(eof), sizeof(eof), endidx.offset);
 	auto blen = size_t(filesize - eof[1].offset);
-	bp_.reset(new char[blen]);
+	bp_.reset(new char[blen]);  // contains everything after data in LIP, starts from BSS
 	pread_exact(bp_.get(), blen, eof[1].offset);
 
 	eof[0].adjust(bp_.get(), eof[1]);
-	first_ = eof[0].pointer_to<fcard>();
+	first_ = eof[0].pointer_to<fcard>();    // points to the start of index(first index)
 	endidx.adjust(bp_.get(), eof[1]);
 	last_ = endidx.pointer_to<fcard>();
 

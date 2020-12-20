@@ -179,6 +179,7 @@ inline bool is_dots(char const* dirname)
 	return dirname == "."_sv || dirname == ".."_sv;
 }
 
+// generates the LIP archive given a directory
 void archive(std::function<write_sig> f, gbpath::param_type src,
              archive_options opts)
 {
@@ -192,7 +193,11 @@ void archive(std::function<write_sig> f, gbpath::param_type src,
 
 	pk.start(std::move(f));
 	pk.add_directory(stk.top().second.friendly_name(),
-	                 archive_clock::from(st.st_mtim));
+	                 archive_clock::from(st.st_mtim),
+					 st.st_size,
+					 st.st_uid,
+					 st.st_gid,
+					 st.st_mode);
 
 	while (not stk.empty())
 	{
@@ -232,7 +237,11 @@ void archive(std::function<write_sig> f, gbpath::param_type src,
 				            d.second);
 				pk.add_directory(
 				    d.second.friendly_name(),
-				    archive_clock::from(st.st_mtim));
+				    archive_clock::from(st.st_mtim),
+				    st.st_size,
+				    st.st_uid,
+				    st.st_gid,
+				    st.st_mode);
 				break;
 			case S_IFREG:
 			{
@@ -241,6 +250,10 @@ void archive(std::function<write_sig> f, gbpath::param_type src,
 				pk.add_regular_file(
 				    d.second.friendly_name(),
 				    archive_clock::from(st.st_mtim),
+                    st.st_size,
+                    st.st_uid,
+                    st.st_gid,
+                    st.st_mode,
 				    to_copy.get_reader(),
 				    d.first.is_executable(entryp->d_name) |
 				        opts.feat);
@@ -251,7 +264,11 @@ void archive(std::function<write_sig> f, gbpath::param_type src,
 				    d.second.friendly_name(),
 				    archive_clock::from(st.st_mtim),
 				    d.first.readlink(st.st_size,
-				                     entryp->d_name));
+				                     entryp->d_name),
+					st.st_size,
+					st.st_uid,
+					st.st_gid,
+					st.st_mode);
 				break;
 			}
 

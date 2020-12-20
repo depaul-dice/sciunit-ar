@@ -135,8 +135,14 @@ struct fcard
 	};
 	finfo info;
 	ftime mtime;
-	ptr begin;
-	ptr end;
+    // new metadata here
+    __off_t msize;
+    __uid_t uid;
+    __gid_t gid;
+    __mode_t permissions;
+
+    ptr begin;
+    ptr end;
 
 	int64_t stored_size() const { return end - begin; }
 
@@ -164,7 +170,7 @@ struct fcard
 	}
 };
 
-static_assert(sizeof(fcard) == 64, "unsupported");
+static_assert(sizeof(fcard) == 88, "unsupported");
 
 struct header
 {
@@ -181,9 +187,12 @@ public:
 	~packer();
 
 	void start(std::function<write_sig> f);
-	void add_directory(string_view arcname, ftime);
-	void add_symlink(string_view arcname, ftime, string_view target);
-	void add_regular_file(string_view arcname, ftime,
+	void add_directory(string_view arcname, ftime mtime, __off_t  msize,
+                       __uid_t uid, __gid_t gid, __mode_t permissions);
+	void add_symlink(string_view arcname, ftime mtime, string_view target, __off_t  msize,
+                     __uid_t uid, __gid_t gid, __mode_t permissions);
+	void add_regular_file(string_view arcname, ftime mtime, __off_t  msize,
+                          __uid_t uid, __gid_t gid, __mode_t permissions,
 	                      stdex::signature<refill_sig>, feature = {});
 
 	void finish()

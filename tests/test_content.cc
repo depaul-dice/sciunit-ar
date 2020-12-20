@@ -21,7 +21,7 @@ TEST_CASE("content")
 
 	SUBCASE("directory")
 	{
-		pk.add_directory("tmp", lip::archive_clock::now());
+		pk.add_directory("tmp", lip::archive_clock::now(), 0, 0, 0, 0);
 		pk.finish();
 		auto idx = lip::index(f, int64_t(s.size()));
 
@@ -32,7 +32,7 @@ TEST_CASE("content")
 	SUBCASE("short content")
 	{
 		pk.add_symlink("link name", lip::archive_clock::now(),
-		               "target");
+		               "target", 0, 0, 0, 0);
 		pk.finish();
 		auto idx = lip::index(f, int64_t(s.size()));
 
@@ -44,7 +44,7 @@ TEST_CASE("content")
 	{
 		randombuf input(70000);
 		pk.add_regular_file(
-		    "foo", lip::archive_clock::now(),
+		    "foo", lip::archive_clock::now(), 0, 0, 0, 0,
 		    [&](char* p, size_t sz, std::error_code&) {
 			    return static_cast<size_t>(
 			        input.sgetn(p, std::streamsize(sz)));
