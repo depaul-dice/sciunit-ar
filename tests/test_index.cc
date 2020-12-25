@@ -31,7 +31,7 @@ TEST_CASE("index")
 	SUBCASE("empty")
 	{
 		pk.finish();
-		auto idx = lip::index(f, int64_t(s.size()));
+		auto idx = lip::index(f, int64_t(s.size()), nullptr);
 
 		REQUIRE(idx.empty());
 		REQUIRE(idx.begin() == idx.end());
@@ -52,7 +52,7 @@ TEST_CASE("index")
 			        input.sgetn(p, std::streamsize(sz)));
 		    });
 		pk.finish();
-		auto const idx = lip::index(f, int64_t(s.size()));
+		auto const idx = lip::index(f, int64_t(s.size()), nullptr);
 
 		REQUIRE_FALSE(idx.empty());
 		REQUIRE(idx.size() == 4);
@@ -90,7 +90,7 @@ TEST_CASE("index")
 		defer(vvpkg::xclose(fd));
 
 		auto idx = lip::index(vvpkg::from_seekable_descriptor(fd),
-		                      vvpkg::xfstat(fd).st_size);
+		                      vvpkg::xfstat(fd).st_size, nullptr);
 
 		REQUIRE_FALSE(idx.empty());
 

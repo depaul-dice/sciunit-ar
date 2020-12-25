@@ -136,7 +136,7 @@ struct fcard
 	finfo info;
 	ftime mtime;
     // new metadata here
-    __off_t msize;
+    __off_t size_;
     __uid_t uid;
     __gid_t gid;
     __mode_t permissions;
@@ -235,12 +235,24 @@ private:
 	std::unique_ptr<impl> impl_;
 };
 
+static string_view removeDirName(string_view str)
+{
+    auto pos = str.find("/");
+    if(pos == str.size() - 1)
+    {
+        // this is the base dir
+        return str;
+    }
+    string_view substr = str.substr(pos + 2);   // account for escape character
+    return substr;
+}
+
 class index
 {
 public:
 	using iterator = fcard const*;
 
-	explicit index(stdex::signature<pread_sig> f, int64_t filesize);
+	explicit index(stdex::signature<pread_sig> f, int64_t filesize, ptr* pointers);
 
 	iterator begin() const { return first_; }
 	iterator end() const { return last_; }
@@ -256,18 +268,29 @@ public:
 		return *it;
 	}
 
-	iterator find(string_view arcname) const
-	{
-		auto it =
-		    std::lower_bound(begin(), end(), arcname,
-		                     [](fcard const& fc, string_view target) {
-			                     return fc.arcname < target;
-		                     });
-		if (it != end() && it->arcname == arcname)
-			return it;
-		else
-			return end();
-	}
+    iterator find(string_view arcname) const
+    {
+        auto it =
+                std::lower_bound(begin(), end(), arcname,
+                                 [](fcard const& fc, string_view target) {
+                                     return fc.arcname < target;
+                                 });
+        if (it != end() && it->arcname == arcname)
+            return it;
+        else
+            return end();
+    }
+
+    iterator find_by_name(string_view arcname) const
+    {
+        string_view marcname = removeDirName(arcname);
+        auto it = std::find_if(begin(), end(),
+                  [=](fcard const& fc)
+                  {
+                      return removeDirName(fc.arcname) == marcname;
+                  });
+        return it;
+    }
 
 private:
 	fcard *first_, *last_;

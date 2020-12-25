@@ -172,13 +172,11 @@ void packer::write_bss()
 	auto diff = size_t(impl_->get_index(cur_).offset -
 	                   impl_->get_bes(cur_).offset);
 	write_buffer("\0\0\0\0\0\0\0", diff);
+
 }
 
 void packer::write_index()
 {
-    // align for the start of index
-    auto diff_ = size_t(impl_->get_index(cur_).offset - impl_->get_bes(cur_).offset);
-    write_buffer("\0\0\0\0\0\0\0", diff_);
 	cedar::npos_t from = 0;
 	size_t sz = 0;
 	auto& m = impl_->m;
@@ -194,7 +192,7 @@ void packer::write_section_pointers()
 	write_struct(impl_->get_bss(cur_));
 }
 
-index::index(stdex::signature<pread_sig> f, int64_t filesize)
+index::index(stdex::signature<pread_sig> f, int64_t filesize, ptr* pointers)
 {
 	auto pread_exact = [=](char* p, size_t sz, int64_t from) mutable {
 		if (f(p, sz, from) != sz)
@@ -212,6 +210,8 @@ index::index(stdex::signature<pread_sig> f, int64_t filesize)
 	auto blen = size_t(filesize - eof[1].offset);
 	bp_.reset(new char[blen]);  // contains everything after data in LIP, starts from BSS
 	pread_exact(bp_.get(), blen, eof[1].offset);
+	pointers[0] = eof[0];
+	pointers[1] = eof[1];
 
 	eof[0].adjust(bp_.get(), eof[1]);
 	first_ = eof[0].pointer_to<fcard>();    // points to the start of index(first index)

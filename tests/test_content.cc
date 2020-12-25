@@ -23,7 +23,7 @@ TEST_CASE("content")
 	{
 		pk.add_directory("tmp", lip::archive_clock::now(), 0, 0, 0, 0);
 		pk.finish();
-		auto idx = lip::index(f, int64_t(s.size()));
+		auto idx = lip::index(f, int64_t(s.size()), nullptr);
 
 		auto s = lip::content(f).retrieve(idx["tmp"]);
 		REQUIRE(s.empty());
@@ -34,7 +34,7 @@ TEST_CASE("content")
 		pk.add_symlink("link name", lip::archive_clock::now(),
 		               "target", 0, 0, 0, 0);
 		pk.finish();
-		auto idx = lip::index(f, int64_t(s.size()));
+		auto idx = lip::index(f, int64_t(s.size()), nullptr);
 
 		auto s = lip::content(f).retrieve(idx["link name"]);
 		REQUIRE(s == "target");
@@ -50,7 +50,7 @@ TEST_CASE("content")
 			        input.sgetn(p, std::streamsize(sz)));
 		    });
 		pk.finish();
-		auto idx = lip::index(f, int64_t(s.size()));
+		auto idx = lip::index(f, int64_t(s.size()), nullptr);
 
 		auto fc = idx["foo"];
 		REQUIRE_THROWS_AS(lip::content(f).retrieve(fc),

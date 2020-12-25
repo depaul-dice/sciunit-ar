@@ -171,7 +171,7 @@ void list(param_type filename)
 		auto fd = vvpkg::xopen_for_read(filename);
 		defer(vvpkg::xclose(fd));
 		return lip::index(vvpkg::from_seekable_descriptor(fd),
-		                  vvpkg::xfstat(fd).st_size);
+		                  vvpkg::xfstat(fd).st_size, nullptr);
 	}();
 
 	lip::native_gbpath cvt;
