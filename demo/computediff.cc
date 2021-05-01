@@ -3,7 +3,6 @@
 #include <sstream> //std::stringstream
 #include <lip/lip.h>
 #include <vvpkg/c_file_funcs.h>
-#include <vvpkg/fd_funcs.h>
 
 #ifdef _WIN32
 #define U(s) L##s
@@ -30,47 +29,20 @@ struct args
             err:
             fprintf(stderr,
                     "usage: " UF
-                    " [ctx]f [-C <dir>] [--lz4] [--one-level] "
-                    "<archive-file> [<directory>]\n",
+                    "<archive-1> <archive-2>\n",
                     argv[0]);
             exit(2);
         }
 
-        cmd = *p;
-
-        for (;;)
+        archive_1 = *p;
+        if (++p == argv + argc)
         {
-            if (++p == argv + argc)
-                goto err;
-            if ((*p)[0] == U('-'))
-            {
-                view_type vp = *p;
-                if (vp == U("-C"))
-                {
-                    if (++p == argv + argc)
-                        goto err;
-                    cd = *p;
-                }
-                else if (vp == U("--lz4"))
-                    opts.feat =
-                            lip::feature::lz4_compressed;
-                else if (vp == U("--one-level"))
-                    opts.one_level = true;
-                else
-                    goto err;
-            }
-            else
-                break;
+            goto err;
         }
-
-        archive_file = *p;
-        ++p;
-        directory = *p;
+        archive_2 = *p;
     }
 
-    view_type cmd;
-    lip::archive_options opts;
-    param_type cd = nullptr, archive_file, directory;
+    param_type archive_1, archive_2;
 };
 
 
@@ -143,7 +115,7 @@ void iterateIndex(const lip::index& index1, const lip::index& index2)
     std::string dir2 = index2.begin()->arcname;
     std::string output;
     output.reserve(200);
-    output += "Differences between executions " + dir1 + " and " + dir2 + "\n\n";
+    output += "Differences between archives " + dir1 + " and " + dir2 + "\n\n";
     output += "Entries only in " + dir1 + ":\n";
     for(const auto& fn: entries_only_in_e1)
     {
@@ -178,7 +150,7 @@ void iterateIndex(const lip::index& index1, const lip::index& index2)
     std::cout << output;
 }
 
-std::string loadArchive(const std::string& filename)
+std::string loadArchive(param_type filename)
 {
     std::ifstream inFile;
     //open the input file containing LIP archive
@@ -203,8 +175,8 @@ std::string readDataSection(int64_t ptrToBss, stdex::signature<pread_sig> f)
     const int header_size = 8;
     auto data_size = static_cast<unsigned long>(ptrToBss - header_size);
     auto data_section = readDataSection(f, data_size, header_size);
-    std::cout << "data section has bytes: " << data_size << std::endl;
-    std::cout << data_section;
+    std::cout << "data section bytes: " << data_size << std::endl;
+    std::cout << "data section content: \n" <<  data_section << std::endl;
     std::ofstream out("data.txt");
     out << data_section;
     out.close();
@@ -214,7 +186,7 @@ std::string readDataSection(int64_t ptrToBss, stdex::signature<pread_sig> f)
 
 int main(int argc, char* argv[])
 {
-//    args a(argc, const_cast<param_type*>(argv));
+    args a(argc, const_cast<param_type*>(argv));
 
     auto str_check = [](const std::string& str)
     {
@@ -229,14 +201,16 @@ int main(int argc, char* argv[])
     {
         return str.copy(p, sz, size_t(from));
     };
-    str = loadArchive("archive_test2.lip");
+    std::cout << "Stats " << a.archive_1 << std::endl;
+    str = loadArchive(a.archive_1);
     str_check(str);
     lip::ptr pointers[2];
     auto const idx1 = lip::index(f, int64_t(str.size()), pointers);
     std::string data1 = readDataSection(pointers[1].offset, f);
 
     str.clear();
-    str = loadArchive("archive_test.lip");
+    std::cout << "Stats " << a.archive_2 << std::endl;
+    str = loadArchive(a.archive_2);
     str_check(str);
     auto const idx2 = lip::index(f, int64_t(str.size()), pointers);
     std::string data2 = readDataSection(pointers[1].offset, f);
