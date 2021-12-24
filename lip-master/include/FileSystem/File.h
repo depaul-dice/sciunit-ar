@@ -111,7 +111,8 @@ protected:
 
 	readOnlyFileHandle(const char* fileName)
 	{
-		assert(File::SUCCESS == File::Open(handle, fileName, File::READ));
+		// assert(File::SUCCESS == File::Open(handle, fileName, File::READ));
+        File::Open(handle, fileName, File::READ);
 	}
 
 	virtual void Close() { File::Close(handle); }

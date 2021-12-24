@@ -118,6 +118,8 @@ int main(int argc, char* argv[])
 
 	try
 	{
+                if (a.cd != nullptr)
+                    chdir(a.cd);
 		if (a.cmd == U("cf"))
 		{
 			if (a.directory == nullptr)
